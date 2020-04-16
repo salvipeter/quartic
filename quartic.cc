@@ -254,13 +254,21 @@ void reset()
 
 void printData()
 {
-  std::cout << "(make-bspline-curve " << degree << " '( ";
-  for(DoubleVector::const_iterator i = curve.knots.begin(); i != curve.knots.end(); ++i)
-    std::cout << *i << " ";
-  std::cout << ") '( ";
-  for(PointVector::const_iterator i = curve.cp.begin(); i != curve.cp.end(); ++i)
-    std::cout << "(" << i->x << " " << i->y << ") ";
-  std::cout << "))" << std::endl;
+  std::cout << "B-spline curve:" << std::endl;
+  std::cout << "\tDegree: " << degree << std::endl;
+  std::cout << "\tKnots: [";
+  for(DoubleVector::const_iterator i = curve.knots.begin(); i != curve.knots.end(); ++i) {
+    if (i != curve.knots.begin())
+      std::cout << ", ";
+    std::cout << *i;
+  }
+  std::cout << "]\n\tControls: [";
+  for(PointVector::const_iterator i = curve.cp.begin(); i != curve.cp.end(); ++i) {
+    if (i != curve.cp.begin())
+      std::cout << ", ";
+    std::cout << "[" << i->x << ", " << i->y << "]";
+  }
+  std::cout << "]" << std::endl;
 }
 
 void reconstructCurve()
