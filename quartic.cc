@@ -28,11 +28,11 @@ int const width = 800;
 int const height = 600;
 int const tolerance = 8;	// largest allowed hor/ver deviation in pixels
 int const curvature_sparsity = 1;
-double const curvature_magnification = 0.5;
 std::string message;
 
 // IDs for the menu elements / keyboard shortcuts
 enum MenuCommand { MENU_RESET, MENU_DELETE_LAST, MENU_CUBIC, MENU_QUARTIC, MENU_CURVATURE,
+                   MENU_INC_CURVATURE, MENU_DEC_CURVATURE,
                    MENU_PARAM_ARC, MENU_PARAM_CENTRIPETAL,
                    MENU_INTERPOLATE_SIMPLE, MENU_INTERPOLATE_PARABOLA, MENU_INTERPOLATE_SKETCHES,
                    MENU_APPROXIMATE, MENU_PROXIMITY, MENU_INC_DEPTH, MENU_DEC_DEPTH,
@@ -51,6 +51,7 @@ struct SavedPoints {
   DoubleVector params;
   PointVector points;
 } saved_points;
+double curvature_magnification = 0.1;
 size_t depth = 0;
 
 // ***********
@@ -309,6 +310,8 @@ void executeCommand(int command)
   case MENU_CUBIC: degree = 3; reconstructCurve(); break;
   case MENU_QUARTIC: degree = 4; reconstructCurve(); break;
   case MENU_CURVATURE: show_curvature = !show_curvature; break;
+  case MENU_INC_CURVATURE: curvature_magnification *= 2; glutPostRedisplay(); break;
+  case MENU_DEC_CURVATURE: curvature_magnification /= 2; glutPostRedisplay(); break;
   case MENU_PARAM_ARC: centripetal_parameterization = false; reconstructCurve(); break;
   case MENU_PARAM_CENTRIPETAL: centripetal_parameterization = true; reconstructCurve(); break;
   case MENU_INTERPOLATE_SIMPLE: approximation_type = INTERP_PIEGL_SIMPLE; reconstructCurve(); break;
@@ -371,6 +374,8 @@ void keyboard(unsigned char key, int x, int y)
     case '3' : executeCommand(MENU_CUBIC); break;
     case '4' : executeCommand(MENU_QUARTIC); break;
     case 'C' : executeCommand(MENU_CURVATURE); break;
+    case '*' : executeCommand(MENU_INC_CURVATURE); break;
+    case '/' : executeCommand(MENU_DEC_CURVATURE); break;
     case 'a' : executeCommand(MENU_PARAM_ARC); break;
     case 'c' : executeCommand(MENU_PARAM_CENTRIPETAL); break;
     case 'n' : executeCommand(MENU_INTERPOLATE_SIMPLE); break;
@@ -452,6 +457,8 @@ int buildPopupMenu()
   glutAddMenuEntry("Reset\t(r)", MENU_RESET);
   glutAddMenuEntry("Delete last point\t(d)", MENU_DELETE_LAST);
   glutAddMenuEntry("Toggle curvature\t(C)", MENU_CURVATURE);
+  glutAddMenuEntry("Scale up curvature\t(*)", MENU_INC_CURVATURE);
+  glutAddMenuEntry("Scale down curvature\t(/)", MENU_DEC_CURVATURE);
   glutAddMenuEntry("----", -1);
   glutAddMenuEntry("Use cubic curve\t(3)", MENU_CUBIC);
   glutAddMenuEntry("Use quartic curve\t(4)", MENU_QUARTIC);
