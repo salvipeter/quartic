@@ -783,3 +783,37 @@ BSplineCurve BSplineCurve::approximate(PointVector const &points, size_t p, size
 
   return result;
 }
+
+static BSplineCurve bezierToBSpline(const BezierCurve &curve) {
+  BSplineCurve result;
+  result.p = curve.n;
+  result.n = curve.n;
+  std::fill_n(std::back_inserter(result.knots), result.p + 1, 0.0);
+  std::fill_n(std::back_inserter(result.knots), result.p + 1, 1.0);
+  result.cp = curve.cp;
+  return result;
+}
+
+static BezierCurve subdivide(const BezierCurve &curve) {
+  BezierCurve result;
+  result.n = curve.n + (curve.n - 1) * 2;
+  double alpha = (double)curve.n / (curve.n + 1);
+  result.cp.push_back(curve.cp.front());
+  for (size_t i = 1; i < curve.cp.size() - 1; ++i) {
+    result.cp.push_back(curve.cp[i-1] * (1 - alpha) + curve.cp[i] * alpha);
+    result.cp.push_back(curve.cp[i]);
+    result.cp.push_back(curve.cp[i+1] * (1 - alpha) + curve.cp[i] * alpha);
+  }
+  result.cp.push_back(curve.cp.back());
+  return result;
+}
+
+BSplineCurve BSplineCurve::proximity(PointVector const &points, size_t depth) {
+  BezierCurve result;
+  result.n = points.size() - 1;
+  result.cp = points;
+  if (result.n > 2)
+    for (size_t i = 0; i < depth; ++i)
+      result = subdivide(result);
+  return bezierToBSpline(result);
+}

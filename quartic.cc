@@ -17,8 +17,9 @@
 // ***********
 
 size_t degree = 3;
-enum ApproximationType { INTERP_PIEGL_SIMPLE, INTERP_PIEGL_PARABOLA, INTERP_SKETCHES, APPROXIMATE }
-  approximation_type = INTERP_SKETCHES;
+enum ApproximationType {
+  INTERP_PIEGL_SIMPLE, INTERP_PIEGL_PARABOLA, INTERP_SKETCHES, APPROXIMATE, PROXIMITY
+} approximation_type = INTERP_SKETCHES;
 size_t const approximation_complexity = 5;
 bool show_curvature = false;
 bool centripetal_parameterization = false;
@@ -34,6 +35,7 @@ std::string message;
 enum MenuCommand { MENU_RESET, MENU_DELETE_LAST, MENU_CUBIC, MENU_QUARTIC, MENU_CURVATURE,
                    MENU_PARAM_ARC, MENU_PARAM_CENTRIPETAL,
                    MENU_INTERPOLATE_SIMPLE, MENU_INTERPOLATE_PARABOLA, MENU_INTERPOLATE_SKETCHES,
+                   MENU_APPROXIMATE, MENU_PROXIMITY, MENU_INC_DEPTH, MENU_DEC_DEPTH,
                    MENU_LOAD, MENU_SAVE, MENU_PRINT, MENU_QUIT };
 enum LoadSave { NOTHING, LOADING, SAVING } loadsave = NOTHING;
 
@@ -49,6 +51,7 @@ struct SavedPoints {
   DoubleVector params;
   PointVector points;
 } saved_points;
+size_t depth = 0;
 
 // ***********
 // * Display *
@@ -206,6 +209,7 @@ void drawInfo()
   case INTERP_PIEGL_PARABOLA: strcpy(&s_interp[5], "par"); break;
   case INTERP_SKETCHES: strcpy(&s_interp[5], "ske"); break;
   case APPROXIMATE: strcpy(&s_interp[5], "app"); break;
+  case PROXIMITY: strcpy(&s_interp[5], "pro"); break;
   }
   glColor3d(0.0, 0.0, 0.0);
   glRasterPos2f(-0.98, 0.92);
@@ -291,6 +295,9 @@ void reconstructCurve()
                                       std::min(approximation_complexity, points.size() - 1),
                                       centripetal_parameterization);
     break;
+  case PROXIMITY:
+    curve = BSplineCurve::proximity(points, depth);
+    break;
   }
 }
 
@@ -308,6 +315,10 @@ void executeCommand(int command)
   case MENU_INTERPOLATE_PARABOLA:
     approximation_type = INTERP_PIEGL_PARABOLA; reconstructCurve(); break;
   case MENU_INTERPOLATE_SKETCHES: approximation_type = INTERP_SKETCHES; reconstructCurve(); break;
+  case MENU_APPROXIMATE: approximation_type = APPROXIMATE; reconstructCurve(); break;
+  case MENU_PROXIMITY: approximation_type = PROXIMITY; reconstructCurve(); break;
+  case MENU_INC_DEPTH: depth++; reconstructCurve(); break;
+  case MENU_DEC_DEPTH: if (depth) depth--; reconstructCurve(); break;
   case MENU_LOAD: loadsave = LOADING; message = "Load from slot (0-9)"; glutPostRedisplay(); break;
   case MENU_SAVE: loadsave = SAVING; message = "Save in slot (0-9)"; glutPostRedisplay(); break;
   case MENU_PRINT: printData(); break;
@@ -365,6 +376,10 @@ void keyboard(unsigned char key, int x, int y)
     case 'n' : executeCommand(MENU_INTERPOLATE_SIMPLE); break;
     case 'p' : executeCommand(MENU_INTERPOLATE_PARABOLA); break;
     case 's' : executeCommand(MENU_INTERPOLATE_SKETCHES); break;
+    case 'A' : executeCommand(MENU_APPROXIMATE); break;
+    case 'b' : executeCommand(MENU_PROXIMITY); break;
+    case '+' : executeCommand(MENU_INC_DEPTH); break;
+    case '-' : executeCommand(MENU_DEC_DEPTH); break;
     case 'L' : executeCommand(MENU_LOAD); break;
     case 'S' : executeCommand(MENU_SAVE); break;
     case 'P' : executeCommand(MENU_PRINT); break;
@@ -444,6 +459,10 @@ int buildPopupMenu()
   glutAddMenuEntry("Interpolation: Piegl/normal\t(n)", MENU_INTERPOLATE_SIMPLE);
   glutAddMenuEntry("Interpolation: Piegl/parabola\t(p)", MENU_INTERPOLATE_PARABOLA);
   glutAddMenuEntry("Interpolation: Sketches\t(s)", MENU_INTERPOLATE_SKETCHES);
+  glutAddMenuEntry("Approximation\t(A)", MENU_APPROXIMATE);
+  glutAddMenuEntry("Proximity Bezier curve\t(b)", MENU_PROXIMITY);
+  glutAddMenuEntry("Increase depth\t(+)", MENU_INC_DEPTH);
+  glutAddMenuEntry("Decrease depth\t(-)", MENU_DEC_DEPTH);
   glutAddMenuEntry("Load clubs\t(L)", MENU_LOAD);
   glutAddMenuEntry("Save clubs\t(S)", MENU_SAVE);
   glutAddMenuEntry("Print curve data\t(P)", MENU_PRINT);
