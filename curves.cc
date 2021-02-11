@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <cassert>
+#include <iostream>
 #include <limits>
 
 #include <Eigen/LU>
@@ -175,7 +176,7 @@ void BSplineCurve::basisFunctions(size_t i, double u, DoubleVector &coeff) const
 
 Point BSplineCurve::evaluate(double u) const
 {
-  double const span = findSpan(u);
+  size_t span = findSpan(u);
   DoubleVector coeff; basisFunctions(span, u, coeff);
   Point point(0.0, 0.0, 0.0);
   for(size_t i = 0; i <= p; ++i)
@@ -816,5 +817,91 @@ BSplineCurve BSplineCurve::proximity(PointVector const &points, size_t depth, do
   if (result.n > 2)
     for (size_t i = 0; i < depth; ++i)
       result = subdivide(result, alpha);
+  return bezierToBSpline(result);
+}
+
+[[maybe_unused]]
+static Point controlFramePoint(const BSplineCurve &curve, double u) {
+  if (u >= curve.knots[curve.knots.size() - curve.p - 1])
+    return curve.cp.back();
+  double last_greville = 0, greville = 0;
+  size_t i = 0;
+  for (; i <= curve.n; ++i) {
+    last_greville = greville;
+    greville = 0;
+    for (size_t j = 1; j <= curve.p; ++j)
+      greville += curve.knots[i+j];
+    greville /= curve.p;
+    if (greville > u)
+      break;
+  }
+  double alpha = (u - last_greville) / (greville - last_greville);
+  return curve.cp[i-1] * (1 - alpha) + curve.cp[i] * alpha;
+}
+
+static PointVector sampleCurve(const BSplineCurve &curve, size_t resolution) {
+  PointVector result;
+  for (size_t i = 0; i < resolution; ++i) {
+    double const t = (double)i / ((double)resolution - 1.0);
+    if (curve.knots[curve.p] <= t && t <= curve.knots[curve.knots.size() - curve.p - 1])
+      result.push_back(curve.evaluate(t));
+  }
+  return result;
+}
+
+// Assumes uniform parameters
+static BezierCurve fitBezier(const PointVector &points, size_t degree, double alpha) {
+  size_t resolution = points.size();
+  BezierCurve result;
+  result.n = degree;
+
+  Eigen::MatrixXd N = Eigen::MatrixXd::Zero(resolution + degree - 1, degree + 1);
+  Eigen::MatrixXd S = Eigen::MatrixXd::Zero(resolution + degree - 1, 3);
+  for (size_t i = 0; i < resolution; ++i) {
+    double const u = (double)i / ((double)resolution - 1.0);
+    DoubleVector coeff; result.bernsteinAll(degree, u, coeff);
+    for(size_t j = 0; j <= degree; ++j)
+      N(i, j) = coeff[j];
+    S(i, 0) = points[i].x;
+    S(i, 1) = points[i].y;
+    S(i, 2) = points[i].z;
+  }
+  double smoothing = alpha / 10.0;
+  for (size_t i = 1; i < degree; ++i) {
+    N(resolution + i - 1, i - 1) = smoothing;
+    N(resolution + i - 1, i) = -2 * smoothing;
+    N(resolution + i - 1, i + 1) = smoothing;
+  }
+
+  // Fill the control points
+  Eigen::MatrixXd x = N.fullPivLu().solve(S);
+  for(size_t i = 0; i <= degree; ++i)
+    result.cp.push_back(Point(x(i, 0), x(i, 1), x(i, 2)));
+
+  std::cout << "Degree: " << degree << std::endl;
+  std::cout << "Smoothing: " << smoothing << std::endl;
+  std::cout << "Error: " << (N * x - S).norm() << std::endl;
+
+  return result;
+}
+
+static BSplineCurve uniformBSpline(const PointVector &points) {
+  BSplineCurve result;
+  result.p = 3;
+  result.n = points.size() - 1;
+  std::fill_n(std::back_inserter(result.knots), result.p + 1, 0.0);
+  size_t segments = result.n - result.p + 1;
+  for (size_t i = 1; i < segments; ++i)
+    result.knots.push_back((double)i / segments);
+  std::fill_n(std::back_inserter(result.knots), result.p + 1, 1.0);
+  result.cp = points;
+  return result;
+}
+
+BSplineCurve BSplineCurve::proximityFit(PointVector const &points, size_t depth, double alpha) {
+  const size_t resolution = 100;
+  auto base = uniformBSpline(points);
+  auto data = sampleCurve(base, resolution);
+  auto result = fitBezier(data, points.size() + depth, alpha);
   return bezierToBSpline(result);
 }

@@ -18,7 +18,7 @@
 
 size_t degree = 3;
 enum ApproximationType {
-  INTERP_PIEGL_SIMPLE, INTERP_PIEGL_PARABOLA, INTERP_SKETCHES, APPROXIMATE, PROXIMITY
+  INTERP_PIEGL_SIMPLE, INTERP_PIEGL_PARABOLA, INTERP_SKETCHES, APPROXIMATE, PROXIMITY, PROXIMITY_FIT
 } approximation_type = INTERP_SKETCHES;
 size_t const approximation_complexity = 5;
 bool show_curvature = false;
@@ -35,7 +35,8 @@ enum MenuCommand { MENU_RESET, MENU_DELETE_LAST, MENU_CUBIC, MENU_QUARTIC, MENU_
                    MENU_INC_CURVATURE, MENU_DEC_CURVATURE,
                    MENU_PARAM_ARC, MENU_PARAM_CENTRIPETAL,
                    MENU_INTERPOLATE_SIMPLE, MENU_INTERPOLATE_PARABOLA, MENU_INTERPOLATE_SKETCHES,
-                   MENU_APPROXIMATE, MENU_PROXIMITY, MENU_INC_DEPTH, MENU_DEC_DEPTH,
+                   MENU_APPROXIMATE, MENU_PROXIMITY, MENU_PROXIMITY_FIT,
+                   MENU_INC_DEPTH, MENU_DEC_DEPTH,
                    MENU_INC_ALPHA, MENU_DEC_ALPHA, MENU_DEFAULT_ALPHA,
                    MENU_LOAD, MENU_SAVE, MENU_PRINT, MENU_QUIT };
 enum LoadSave { NOTHING, LOADING, SAVING } loadsave = NOTHING;
@@ -213,6 +214,7 @@ void drawInfo()
   case INTERP_SKETCHES: strcpy(&s_interp[5], "ske"); break;
   case APPROXIMATE: strcpy(&s_interp[5], "app"); break;
   case PROXIMITY: strcpy(&s_interp[5], "pro"); break;
+  case PROXIMITY_FIT: strcpy(&s_interp[5], "prf"); break;
   }
   glColor3d(0.0, 0.0, 0.0);
   glRasterPos2f(-0.98, 0.92);
@@ -301,6 +303,9 @@ void reconstructCurve()
   case PROXIMITY:
     curve = BSplineCurve::proximity(points, depth, alpha);
     break;
+  case PROXIMITY_FIT:
+    curve = BSplineCurve::proximityFit(points, depth, alpha);
+    break;
   }
 }
 
@@ -321,7 +326,9 @@ void executeCommand(int command)
     approximation_type = INTERP_PIEGL_PARABOLA; reconstructCurve(); break;
   case MENU_INTERPOLATE_SKETCHES: approximation_type = INTERP_SKETCHES; reconstructCurve(); break;
   case MENU_APPROXIMATE: approximation_type = APPROXIMATE; reconstructCurve(); break;
-  case MENU_PROXIMITY: approximation_type = PROXIMITY; reconstructCurve(); break;
+  case MENU_PROXIMITY: approximation_type = PROXIMITY; depth = alpha = 0; reconstructCurve(); break;
+  case MENU_PROXIMITY_FIT: approximation_type = PROXIMITY_FIT; depth = alpha = 0;
+    reconstructCurve(); break;
   case MENU_INC_DEPTH: depth++; reconstructCurve(); break;
   case MENU_DEC_DEPTH: if (depth) depth--; reconstructCurve(); break;
   case MENU_INC_ALPHA: alpha = alpha ? alpha - 0.05 : 0.5; reconstructCurve(); break;
@@ -388,6 +395,7 @@ void keyboard(unsigned char key, int x, int y)
     case 's' : executeCommand(MENU_INTERPOLATE_SKETCHES); break;
     case 'A' : executeCommand(MENU_APPROXIMATE); break;
     case 'b' : executeCommand(MENU_PROXIMITY); break;
+    case 'f' : executeCommand(MENU_PROXIMITY_FIT); break;
     case '+' : executeCommand(MENU_INC_DEPTH); break;
     case '-' : executeCommand(MENU_DEC_DEPTH); break;
     case '8' : executeCommand(MENU_INC_ALPHA); break;
@@ -481,6 +489,7 @@ int buildPopupMenu()
   glutAddMenuEntry("Approximation\t(A)", MENU_APPROXIMATE);
   glutAddMenuEntry("----", -1);
   glutAddMenuEntry("Proximity Bezier curve\t(b)", MENU_PROXIMITY);
+  glutAddMenuEntry("Proximity Bezier fit\t(f)", MENU_PROXIMITY_FIT);
   glutAddMenuEntry("Increase proximity\t(+)", MENU_INC_DEPTH);
   glutAddMenuEntry("Decrease proximity\t(-)", MENU_DEC_DEPTH);
   glutAddMenuEntry("Decrease prox. alpha\t(8)", MENU_DEC_ALPHA);
