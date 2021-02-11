@@ -794,10 +794,11 @@ static BSplineCurve bezierToBSpline(const BezierCurve &curve) {
   return result;
 }
 
-static BezierCurve subdivide(const BezierCurve &curve) {
+static BezierCurve subdivide(const BezierCurve &curve, double alpha) {
   BezierCurve result;
   result.n = curve.n + (curve.n - 1) * 2;
-  double alpha = (double)curve.n / (curve.n + 1);
+  if (!alpha)
+    alpha = (double)curve.n / (curve.n + 1);
   result.cp.push_back(curve.cp.front());
   for (size_t i = 1; i < curve.cp.size() - 1; ++i) {
     result.cp.push_back(curve.cp[i-1] * (1 - alpha) + curve.cp[i] * alpha);
@@ -808,12 +809,12 @@ static BezierCurve subdivide(const BezierCurve &curve) {
   return result;
 }
 
-BSplineCurve BSplineCurve::proximity(PointVector const &points, size_t depth) {
+BSplineCurve BSplineCurve::proximity(PointVector const &points, size_t depth, double alpha) {
   BezierCurve result;
   result.n = points.size() - 1;
   result.cp = points;
   if (result.n > 2)
     for (size_t i = 0; i < depth; ++i)
-      result = subdivide(result);
+      result = subdivide(result, alpha);
   return bezierToBSpline(result);
 }

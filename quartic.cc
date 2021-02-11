@@ -36,6 +36,7 @@ enum MenuCommand { MENU_RESET, MENU_DELETE_LAST, MENU_CUBIC, MENU_QUARTIC, MENU_
                    MENU_PARAM_ARC, MENU_PARAM_CENTRIPETAL,
                    MENU_INTERPOLATE_SIMPLE, MENU_INTERPOLATE_PARABOLA, MENU_INTERPOLATE_SKETCHES,
                    MENU_APPROXIMATE, MENU_PROXIMITY, MENU_INC_DEPTH, MENU_DEC_DEPTH,
+                   MENU_INC_ALPHA, MENU_DEC_ALPHA, MENU_DEFAULT_ALPHA,
                    MENU_LOAD, MENU_SAVE, MENU_PRINT, MENU_QUIT };
 enum LoadSave { NOTHING, LOADING, SAVING } loadsave = NOTHING;
 
@@ -53,6 +54,7 @@ struct SavedPoints {
 } saved_points;
 double curvature_magnification = 0.1;
 size_t depth = 0;
+double alpha = 0;
 
 // ***********
 // * Display *
@@ -297,7 +299,7 @@ void reconstructCurve()
                                       centripetal_parameterization);
     break;
   case PROXIMITY:
-    curve = BSplineCurve::proximity(points, depth);
+    curve = BSplineCurve::proximity(points, depth, alpha);
     break;
   }
 }
@@ -322,6 +324,9 @@ void executeCommand(int command)
   case MENU_PROXIMITY: approximation_type = PROXIMITY; reconstructCurve(); break;
   case MENU_INC_DEPTH: depth++; reconstructCurve(); break;
   case MENU_DEC_DEPTH: if (depth) depth--; reconstructCurve(); break;
+  case MENU_INC_ALPHA: alpha = alpha ? alpha - 0.05 : 0.5; reconstructCurve(); break;
+  case MENU_DEC_ALPHA: alpha = alpha ? alpha + 0.05 : 1.0; reconstructCurve(); break;
+  case MENU_DEFAULT_ALPHA: alpha = 0; reconstructCurve(); break;
   case MENU_LOAD: loadsave = LOADING; message = "Load from slot (0-9)"; glutPostRedisplay(); break;
   case MENU_SAVE: loadsave = SAVING; message = "Save in slot (0-9)"; glutPostRedisplay(); break;
   case MENU_PRINT: printData(); break;
@@ -385,6 +390,9 @@ void keyboard(unsigned char key, int x, int y)
     case 'b' : executeCommand(MENU_PROXIMITY); break;
     case '+' : executeCommand(MENU_INC_DEPTH); break;
     case '-' : executeCommand(MENU_DEC_DEPTH); break;
+    case '8' : executeCommand(MENU_INC_ALPHA); break;
+    case '9' : executeCommand(MENU_DEC_ALPHA); break;
+    case '0' : executeCommand(MENU_DEFAULT_ALPHA); break;
     case 'L' : executeCommand(MENU_LOAD); break;
     case 'S' : executeCommand(MENU_SAVE); break;
     case 'P' : executeCommand(MENU_PRINT); break;
@@ -475,6 +483,9 @@ int buildPopupMenu()
   glutAddMenuEntry("Proximity Bezier curve\t(b)", MENU_PROXIMITY);
   glutAddMenuEntry("Increase proximity\t(+)", MENU_INC_DEPTH);
   glutAddMenuEntry("Decrease proximity\t(-)", MENU_DEC_DEPTH);
+  glutAddMenuEntry("Decrease prox. alpha\t(8)", MENU_DEC_ALPHA);
+  glutAddMenuEntry("Increase prox. alpha\t(9)", MENU_INC_ALPHA);
+  glutAddMenuEntry("Default prox. alpha\t(0)", MENU_DEFAULT_ALPHA);
   glutAddMenuEntry("----", -1);
   glutAddMenuEntry("Load clubs\t(L)", MENU_LOAD);
   glutAddMenuEntry("Save clubs\t(S)", MENU_SAVE);
