@@ -799,7 +799,8 @@ static BezierCurve subdivide(const BezierCurve &curve, double alpha) {
   BezierCurve result;
   result.n = curve.n + (curve.n - 1) * 2;
   if (!alpha)
-    alpha = (double)curve.n / (curve.n + 1);
+    // alpha = (double)curve.n / (curve.n + 1);
+    alpha = 2.0 / 3.0;
   result.cp.push_back(curve.cp.front());
   for (size_t i = 1; i < curve.cp.size() - 1; ++i) {
     result.cp.push_back(curve.cp[i-1] * (1 - alpha) + curve.cp[i] * alpha);
