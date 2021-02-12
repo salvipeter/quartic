@@ -64,4 +64,5 @@ struct BSplineCurve
                                   bool centripetal);
   static BSplineCurve proximity(PointVector const &points, size_t depth, double alpha);
   static BSplineCurve proximityFit(PointVector const &points, size_t depth, double alpha);
+  static BSplineCurve proximityDisplacement(PointVector const &points, size_t depth, double alpha);
 };

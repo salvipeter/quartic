@@ -879,8 +879,6 @@ static BezierCurve fitBezier(const PointVector &points, size_t degree, double al
   for(size_t i = 0; i <= degree; ++i)
     result.cp.push_back(Point(x(i, 0), x(i, 1), x(i, 2)));
 
-  std::cout << "Degree: " << degree << std::endl;
-  std::cout << "Smoothing: " << smoothing << std::endl;
   std::cout << "Error: " << (N * x - S).norm() << std::endl;
 
   return result;
@@ -904,5 +902,78 @@ BSplineCurve BSplineCurve::proximityFit(PointVector const &points, size_t depth,
   auto base = uniformBSpline(points);
   auto data = sampleCurve(base, resolution);
   auto result = fitBezier(data, points.size() + depth, alpha);
+  return bezierToBSpline(result);
+}
+
+static void fillPoints(BezierCurve &curve, size_t degree, size_t k) {
+  for (size_t i = 1; i <= degree; ++i) {
+    for (size_t j = 1; j < k; ++j) {
+      auto p = curve.cp[(i-1)*k];
+      auto q = curve.cp[i*k];
+      double alpha = (double)j / k;
+      if (i == 1) {
+        if (j == k - 1)
+          continue;
+        p = curve.cp[1];
+        alpha = (double)j / (k - 1);
+      } else if (i == degree) {
+        if (j == 1)
+          continue;
+        q = curve.cp[curve.n-1];
+        alpha = (double)(j - 1) / (k - 1);
+      }
+      curve.cp[i*k-j] = q + (p - q) * alpha;
+    }
+  }
+}
+
+BSplineCurve BSplineCurve::proximityDisplacement(PointVector const &points, size_t depth,
+                                                 double alpha) {
+  // Original curve
+  BezierCurve curve;
+  curve.n = points.size() - 1;
+  curve.cp = points;
+
+  // Target points (footpoints moved closer to the control polygon)
+  PointVector target;
+  for (size_t i = 1; i < curve.n; ++i) {
+    double u = (double)i / curve.n;
+    auto p = curve.evaluate(u);
+    const auto &q = curve.cp[i];
+    target.push_back(p * (1 - alpha) + q * alpha);
+  }
+
+  // Prepare the subdivided curve
+  double k = depth + 1;
+  BezierCurve result;
+  result.n = curve.n * k;
+  result.cp.resize(result.n + 1);
+  for (size_t i = 0; i <= curve.n; ++i)
+    result.cp[i*k] = curve.cp[i];
+  result.cp[1] = result.cp[0] + (result.cp[k] - result.cp[0]) / k;
+  result.cp[result.n-1] = result.cp[result.n] + (result.cp[result.n-k] - result.cp[result.n]) / k;
+  fillPoints(result, curve.n, k);
+
+  // Progressive-iterative approximation
+  double max_deviation;
+  VectorVector displacements(target.size());
+  while (true) {
+    max_deviation = 0;
+    for (size_t i = 1; i < curve.n; ++i) {
+      double u = (double)i / curve.n;
+      auto p = result.evaluate(u);
+      const auto &q = target[i-1];
+      displacements[i-1] = q - p;
+      double d = (q - p).norm();
+      if (d > max_deviation)
+        max_deviation = d;
+    }
+    if (max_deviation < 1e-5)
+      break;
+    for (size_t i = 1; i < curve.n; ++i)
+      result.cp[i*k] += displacements[i-1];
+    fillPoints(result, curve.n, k);
+  }
+
   return bezierToBSpline(result);
 }

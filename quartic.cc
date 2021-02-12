@@ -4,6 +4,7 @@
 #include <cstring>
 #include <fstream>
 #include <iostream>
+#include <sstream>
 #include <string>
 #include <vector>
 
@@ -18,7 +19,8 @@
 
 size_t degree = 3;
 enum ApproximationType {
-  INTERP_PIEGL_SIMPLE, INTERP_PIEGL_PARABOLA, INTERP_SKETCHES, APPROXIMATE, PROXIMITY, PROXIMITY_FIT
+  INTERP_PIEGL_SIMPLE, INTERP_PIEGL_PARABOLA, INTERP_SKETCHES, APPROXIMATE,
+  PROXIMITY, PROXIMITY_FIT, PROXIMITY_DISPLACEMENT
 } approximation_type = INTERP_SKETCHES;
 size_t const approximation_complexity = 5;
 bool show_curvature = false;
@@ -35,7 +37,8 @@ enum MenuCommand { MENU_RESET, MENU_DELETE_LAST, MENU_CUBIC, MENU_QUARTIC, MENU_
                    MENU_INC_CURVATURE, MENU_DEC_CURVATURE,
                    MENU_PARAM_ARC, MENU_PARAM_CENTRIPETAL,
                    MENU_INTERPOLATE_SIMPLE, MENU_INTERPOLATE_PARABOLA, MENU_INTERPOLATE_SKETCHES,
-                   MENU_APPROXIMATE, MENU_PROXIMITY, MENU_PROXIMITY_FIT,
+                   MENU_APPROXIMATE,
+                   MENU_PROXIMITY, MENU_PROXIMITY_FIT, MENU_PROXIMITY_DISPLACEMENT,
                    MENU_INC_DEPTH, MENU_DEC_DEPTH,
                    MENU_INC_ALPHA, MENU_DEC_ALPHA, MENU_DEFAULT_ALPHA,
                    MENU_LOAD, MENU_SAVE, MENU_PRINT, MENU_QUIT };
@@ -197,32 +200,67 @@ void drawCurve()
 
 void drawInfo()
 {
-  char s_degree[] = "Deg: ?";          // '3' or '4'
-  char s_param[]  = "Par: ???";        // 'arc' or 'cpt'
-  char s_interp[] = "Int: ???";        // 'nor' or 'par' or 'ske'
+  std::string s_degree, s_param, s_interp;
   if (degree == 3)
-    strcpy(&s_degree[5], "3");
+    s_degree = "Deg: 3";
   else
-    strcpy(&s_degree[5], "4");
+    s_degree = "Deg: 4";
   if (centripetal_parameterization)
-    strcpy(&s_param[5], "cpt");
+    s_param = "Par: cpt";
   else
-    strcpy(&s_param[5], "arc");
+    s_param = "Par: arc";
   switch (approximation_type) {
-  case INTERP_PIEGL_SIMPLE: strcpy(&s_interp[5], "nor"); break;
-  case INTERP_PIEGL_PARABOLA: strcpy(&s_interp[5], "par"); break;
-  case INTERP_SKETCHES: strcpy(&s_interp[5], "ske"); break;
-  case APPROXIMATE: strcpy(&s_interp[5], "app"); break;
-  case PROXIMITY: strcpy(&s_interp[5], "pro"); break;
-  case PROXIMITY_FIT: strcpy(&s_interp[5], "prf"); break;
+  case INTERP_PIEGL_SIMPLE: s_interp = "Int: nor"; break;
+  case INTERP_PIEGL_PARABOLA: s_interp = "Int: par"; break;
+  case INTERP_SKETCHES: s_interp = "Int: ske"; break;
+  case APPROXIMATE: s_interp = "Approx."; break;
+  case PROXIMITY:
+    {
+      std::ostringstream s;
+      s << "Deg: " << curve.n;
+      s_degree = s.str();
+    }
+    {
+      std::ostringstream s;
+      s << "Alp: " << alpha;
+      s_param = s.str();
+    }
+    s_interp = "Pro: sub";
+    break;
+  case PROXIMITY_FIT:
+    {
+      std::ostringstream s;
+      s << "Deg: " << curve.n;
+      s_degree = s.str();
+    }
+    {
+      std::ostringstream s;
+      s << "Smo: " << alpha;
+      s_param = s.str();
+    }
+    s_interp = "Pro: fit";
+    break;
+  case PROXIMITY_DISPLACEMENT:
+    {
+      std::ostringstream s;
+      s << "Deg: " << curve.n;
+      s_degree = s.str();
+    }
+    {
+      std::ostringstream s;
+      s << "Alp: " << alpha;
+      s_param = s.str();
+    }
+    s_interp = "Pro: dis";
+    break;
   }
   glColor3d(0.0, 0.0, 0.0);
   glRasterPos2f(-0.98, 0.92);
-  glutBitmapString(GLUT_BITMAP_HELVETICA_18, (unsigned char *)s_degree);
+  glutBitmapString(GLUT_BITMAP_HELVETICA_18, (unsigned char *)s_degree.c_str());
   glRasterPos2f(-0.98, 0.85);
-  glutBitmapString(GLUT_BITMAP_HELVETICA_18, (unsigned char *)s_param);
+  glutBitmapString(GLUT_BITMAP_HELVETICA_18, (unsigned char *)s_param.c_str());
   glRasterPos2f(-0.98, 0.78);
-  glutBitmapString(GLUT_BITMAP_HELVETICA_18, (unsigned char *)s_interp);
+  glutBitmapString(GLUT_BITMAP_HELVETICA_18, (unsigned char *)s_interp.c_str());
   glRasterPos2f(-0.98, 0.71);
   glutBitmapString(GLUT_BITMAP_HELVETICA_18, (unsigned char *)message.c_str());
   message = "";
@@ -306,6 +344,9 @@ void reconstructCurve()
   case PROXIMITY_FIT:
     curve = BSplineCurve::proximityFit(points, depth, alpha);
     break;
+  case PROXIMITY_DISPLACEMENT:
+    curve = BSplineCurve::proximityDisplacement(points, depth, alpha);
+    break;
   }
 }
 
@@ -329,10 +370,22 @@ void executeCommand(int command)
   case MENU_PROXIMITY: approximation_type = PROXIMITY; depth = alpha = 0; reconstructCurve(); break;
   case MENU_PROXIMITY_FIT: approximation_type = PROXIMITY_FIT; depth = alpha = 0;
     reconstructCurve(); break;
+  case MENU_PROXIMITY_DISPLACEMENT: approximation_type = PROXIMITY_DISPLACEMENT; depth = alpha = 0;
+    reconstructCurve(); break;
   case MENU_INC_DEPTH: depth++; reconstructCurve(); break;
   case MENU_DEC_DEPTH: if (depth) depth--; reconstructCurve(); break;
-  case MENU_INC_ALPHA: alpha = alpha ? alpha - 0.05 : 0.5; reconstructCurve(); break;
-  case MENU_DEC_ALPHA: alpha = alpha ? alpha + 0.05 : 1.0; reconstructCurve(); break;
+  case MENU_DEC_ALPHA:
+    alpha = alpha ? alpha - 0.05 : 0.5;
+    if (std::abs(alpha) < 1e-5)
+      alpha = 0;
+    reconstructCurve();
+    break;
+  case MENU_INC_ALPHA:
+    alpha = alpha ? alpha + 0.05 : 1.0;
+    if (std::abs(alpha) < 1e-5)
+      alpha = 0;
+    reconstructCurve();
+    break;
   case MENU_DEFAULT_ALPHA: alpha = 0; reconstructCurve(); break;
   case MENU_LOAD: loadsave = LOADING; message = "Load from slot (0-9)"; glutPostRedisplay(); break;
   case MENU_SAVE: loadsave = SAVING; message = "Save in slot (0-9)"; glutPostRedisplay(); break;
@@ -396,10 +449,11 @@ void keyboard(unsigned char key, int x, int y)
     case 'A' : executeCommand(MENU_APPROXIMATE); break;
     case 'b' : executeCommand(MENU_PROXIMITY); break;
     case 'f' : executeCommand(MENU_PROXIMITY_FIT); break;
+    case 'D' : executeCommand(MENU_PROXIMITY_DISPLACEMENT); break;
     case '+' : executeCommand(MENU_INC_DEPTH); break;
     case '-' : executeCommand(MENU_DEC_DEPTH); break;
-    case '8' : executeCommand(MENU_INC_ALPHA); break;
-    case '9' : executeCommand(MENU_DEC_ALPHA); break;
+    case '8' : executeCommand(MENU_DEC_ALPHA); break;
+    case '9' : executeCommand(MENU_INC_ALPHA); break;
     case '0' : executeCommand(MENU_DEFAULT_ALPHA); break;
     case 'L' : executeCommand(MENU_LOAD); break;
     case 'S' : executeCommand(MENU_SAVE); break;
@@ -490,6 +544,7 @@ int buildPopupMenu()
   glutAddMenuEntry("----", -1);
   glutAddMenuEntry("Proximity Bezier curve\t(b)", MENU_PROXIMITY);
   glutAddMenuEntry("Proximity Bezier fit\t(f)", MENU_PROXIMITY_FIT);
+  glutAddMenuEntry("Proximity w/displacement\t(D)", MENU_PROXIMITY_DISPLACEMENT);
   glutAddMenuEntry("Increase proximity\t(+)", MENU_INC_DEPTH);
   glutAddMenuEntry("Decrease proximity\t(-)", MENU_DEC_DEPTH);
   glutAddMenuEntry("Decrease prox. alpha\t(8)", MENU_DEC_ALPHA);
