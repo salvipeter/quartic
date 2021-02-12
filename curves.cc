@@ -795,17 +795,22 @@ static BSplineCurve bezierToBSpline(const BezierCurve &curve) {
   return result;
 }
 
-static BezierCurve subdivide(const BezierCurve &curve, double alpha) {
+static BezierCurve subdivide(const BezierCurve &curve, size_t depth, double alpha) {
   BezierCurve result;
-  result.n = curve.n + (curve.n - 1) * 2;
+  size_t d = (curve.n + 2 * depth) / (2 * depth + 1); // original degree
+  result.n = curve.n + (d - 1) * 2;
   if (!alpha)
-    // alpha = (double)curve.n / (curve.n + 1);
     alpha = 2.0 / 3.0;
   result.cp.push_back(curve.cp.front());
-  for (size_t i = 1; i < curve.cp.size() - 1; ++i) {
+  for (size_t j = 1; j < d; ++j) {
+    size_t i = j + (2 * j - 1) * depth;
+    for (size_t k = i - depth; k < i; ++k)
+      result.cp.push_back(curve.cp[k]);
     result.cp.push_back(curve.cp[i-1] * (1 - alpha) + curve.cp[i] * alpha);
     result.cp.push_back(curve.cp[i]);
     result.cp.push_back(curve.cp[i+1] * (1 - alpha) + curve.cp[i] * alpha);
+    for (size_t k = i + 1; k <= i + depth; ++k)
+      result.cp.push_back(curve.cp[k]);
   }
   result.cp.push_back(curve.cp.back());
   return result;
@@ -817,7 +822,7 @@ BSplineCurve BSplineCurve::proximity(PointVector const &points, size_t depth, do
   result.cp = points;
   if (result.n > 2)
     for (size_t i = 0; i < depth; ++i)
-      result = subdivide(result, alpha);
+      result = subdivide(result, i, alpha);
   return bezierToBSpline(result);
 }
 

@@ -222,7 +222,11 @@ void drawInfo()
     }
     {
       std::ostringstream s;
-      s << "Alp: " << alpha;
+      s << "Alp: ";
+      if (alpha)
+        s << alpha;
+      else
+        s << "1/3";
       s_param = s.str();
     }
     s_interp = "Pro: sub";
@@ -375,18 +379,18 @@ void executeCommand(int command)
   case MENU_INC_DEPTH: depth++; reconstructCurve(); break;
   case MENU_DEC_DEPTH: if (depth) depth--; reconstructCurve(); break;
   case MENU_DEC_ALPHA:
-    alpha = alpha ? alpha - 0.05 : 0.5;
+    alpha = (alpha > 0) ? alpha - 0.05 : 0.5;
     if (std::abs(alpha) < 1e-5)
       alpha = 0;
     reconstructCurve();
     break;
   case MENU_INC_ALPHA:
-    alpha = alpha ? alpha + 0.05 : 1.0;
+    alpha = (alpha < 1) ? alpha + 0.05 : 0.5;
     if (std::abs(alpha) < 1e-5)
       alpha = 0;
     reconstructCurve();
     break;
-  case MENU_DEFAULT_ALPHA: alpha = 0; reconstructCurve(); break;
+  case MENU_DEFAULT_ALPHA: alpha = alpha ? 0 : 1; reconstructCurve(); break;
   case MENU_LOAD: loadsave = LOADING; message = "Load from slot (0-9)"; glutPostRedisplay(); break;
   case MENU_SAVE: loadsave = SAVING; message = "Save in slot (0-9)"; glutPostRedisplay(); break;
   case MENU_PRINT: printData(); break;
