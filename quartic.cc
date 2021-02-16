@@ -126,6 +126,19 @@ void drawCurve()
   if(curve.cp.empty())
     return;
 
+  if (approximation_type == PROXIMITY_DISPLACEMENT) {
+    auto base = BSplineCurve::approximateUniformCubic(points);
+    glLineWidth(1.5);
+    glColor3d(0.0, 0.5, 0.5);
+    glBegin(GL_LINES);
+    for(int i = 0; i <= 100; ++i) {
+      double u = (double)i / 100.0;
+      Point p = base.evaluate(u);
+      glVertex3d(p.x, p.y, p.z);
+    }
+    glEnd();
+  }
+
   // curvature
   if (show_curvature) {
     glLineWidth(1.0);

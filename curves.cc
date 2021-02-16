@@ -922,7 +922,7 @@ static BezierCurve fitBezier(const PointVector &points, size_t degree, double al
   return result;
 }
 
-static BSplineCurve uniformBSpline(const PointVector &points) {
+BSplineCurve BSplineCurve::approximateUniformCubic(const PointVector &points) {
   BSplineCurve result;
   result.p = 3;
   result.n = points.size() - 1;
@@ -937,7 +937,7 @@ static BSplineCurve uniformBSpline(const PointVector &points) {
 
 BSplineCurve BSplineCurve::proximityFit(PointVector const &points, size_t depth, double alpha) {
   const size_t resolution = 100;
-  auto base = uniformBSpline(points);
+  auto base = approximateUniformCubic(points);
   auto data = sampleCurve(base, resolution);
   auto result = fitBezier(data, points.size() + depth, alpha);
   return bezierToBSpline(result);
@@ -966,69 +966,14 @@ static void fillPoints(BezierCurve &curve, size_t degree, size_t k) {
   }
 }
 
-// #define UNIFORM_SUBDIVISION
-#ifdef UNIFORM_SUBDIVISION
 BSplineCurve BSplineCurve::proximityDisplacement(PointVector const &points, size_t depth,
                                                  double alpha) {
   // Original curve
   BezierCurve curve;
   curve.n = points.size() - 1;
   curve.cp = points;
-
-  // Target points (footpoints moved closer to the control polygon)
-  PointVector target;
-  for (size_t i = 1; i < curve.n; ++i) {
-    double u = (double)i / curve.n;
-    auto p = curve.evaluate(u);
-    const auto &q = curve.cp[i];
-    target.push_back(p * (1 - alpha) + q * alpha);
-  }
-
-  // Prepare the subdivided curve
-  double k = depth + 1;
-  BezierCurve result;
-  result.n = curve.n * k;
-  result.cp.resize(result.n + 1);
-  for (size_t i = 0; i <= curve.n; ++i)
-    result.cp[i*k] = curve.cp[i];
-  result.cp[1] = result.cp[0] + (result.cp[k] - result.cp[0]) / k;
-  result.cp[result.n-1] = result.cp[result.n] + (result.cp[result.n-k] - result.cp[result.n]) / k;
-  fillPoints(result, curve.n, k);
-
-  // Progressive-iterative approximation
-  double max_deviation;
-  VectorVector displacements(target.size());
-  while (true) {
-    max_deviation = 0;
-    for (size_t i = 1; i < curve.n; ++i) {
-      double u = (double)i / curve.n;
-      auto p = result.evaluate(u);
-      const auto &q = target[i-1];
-      displacements[i-1] = q - p;
-      double d = (q - p).norm();
-      if (d > max_deviation)
-        max_deviation = d;
-    }
-    if (max_deviation < 1e-5)
-      break;
-
-    for (size_t i = 1; i < curve.n; ++i)
-      result.cp[i*k] += displacements[i-1];
-    fillPoints(result, curve.n, k);
-  }
-
-  return bezierToBSpline(result);
-}
-
-#else  // !UNIFORM_SUBDIVISION
-
-BSplineCurve BSplineCurve::proximityDisplacement(PointVector const &points, size_t depth,
-                                                 double alpha) {
-  // Original curve
-  BezierCurve curve;
-  curve.n = points.size() - 1;
-  curve.cp = points;
-  auto bsp = bezierToBSpline(curve);
+  auto base = approximateUniformCubic(points);
+  // auto bsp = bezierToBSpline(curve);
 
   BezierCurve result = curve;
   for (size_t i = 0; i < depth; ++i) {
@@ -1038,15 +983,18 @@ BSplineCurve BSplineCurve::proximityDisplacement(PointVector const &points, size
     VectorVector displacements;
     for (size_t i = 0; i <= result.n; ++i) {
       double u = (double)i / result.n;
-      displacements.push_back((controlFramePoint(bsp, u) - result.evaluate(u)) * alpha);
+      // displacements.push_back((controlFramePoint(bsp, u) - result.evaluate(u)) * alpha);
+      displacements.push_back((base.evaluate(u) - result.evaluate(u)) * alpha);
     }
 
     // Add displacements
-    for (size_t i = 0; i <= result.n; ++i)
+    auto d1 = (result.cp[1] - result.cp[0]).unit();
+    result.cp[1] += d1 * (displacements[1] * d1);
+    auto d2 = (result.cp[result.n-1] - result.cp[result.n]).unit();
+    result.cp[result.n-1] += d2 * (displacements[result.n-1] * d2);
+    for (size_t i = 2; i < result.n - 1; ++i)
       result.cp[i] += displacements[i];
   }
 
   return bezierToBSpline(result);
 }
-
-#endif // UNIFORM_SUBDIVISION
