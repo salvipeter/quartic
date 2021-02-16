@@ -892,7 +892,7 @@ static PointVector sampleCurve(const BSplineCurve &curve, size_t resolution) {
 static BezierCurve fitBezier(const BezierCurve &curve, const PointVector &points, double alpha) {
   size_t resolution = points.size();
   BezierCurve result = curve;
-  size_t degree = result.n;
+  size_t degree = curve.n;
 
   Eigen::MatrixXd N = Eigen::MatrixXd::Zero(resolution + degree - 1, degree + 1);
   Eigen::MatrixXd S = Eigen::MatrixXd::Zero(resolution + degree - 1, 3);
@@ -907,23 +907,22 @@ static BezierCurve fitBezier(const BezierCurve &curve, const PointVector &points
   }
   double smoothing = alpha / 10.0;
   for (size_t i = 1; i < degree; ++i) {
-    N(resolution + i - 1, i) = smoothing;
-    S(resolution + i - 1, 0) = result.cp[i].x;
-    S(resolution + i - 1, 1) = result.cp[i].y;
-    S(resolution + i - 1, 2) = result.cp[i].z;
+    N(resolution + i - 1, i - 1) = smoothing;
+    N(resolution + i - 1, i) = -2 * smoothing;
+    N(resolution + i - 1, i + 1) = smoothing;
   }
 
   // Fill the control points
   Eigen::MatrixXd x = N.fullPivLu().solve(S);
-  for(size_t i = 0; i <= degree; ++i)
-    result.cp.push_back(Point(x(i, 0), x(i, 1), x(i, 2)));
+  for (size_t i = 1; i < degree; ++i)
+    result.cp[i] = { x(i, 0), x(i, 1), x(i, 2) };
 
   std::cout << "Error: " << (N * x - S).norm() << std::endl;
 
   return result;
 }
 
-BSplineCurve BSplineCurve::approximateUniformCubic(const PointVector &points) {
+BSplineCurve BSplineCurve::uniformCubic(const PointVector &points) {
   BSplineCurve result;
   result.p = 3;
   result.n = points.size() - 1;
@@ -938,7 +937,7 @@ BSplineCurve BSplineCurve::approximateUniformCubic(const PointVector &points) {
 
 BSplineCurve BSplineCurve::proximityFit(PointVector const &points, size_t depth, double alpha) {
   const size_t resolution = 100;
-  auto base = approximateUniformCubic(points);
+  auto base = uniformCubic(points);
   auto data = sampleCurve(base, resolution);
   BezierCurve result;
   result.n = points.size() - 1;
@@ -978,7 +977,7 @@ BSplineCurve BSplineCurve::proximityDisplacement(PointVector const &points, size
   BezierCurve curve;
   curve.n = points.size() - 1;
   curve.cp = points;
-  auto base = approximateUniformCubic(points);
+  auto base = uniformCubic(points);
   // auto bsp = bezierToBSpline(curve);
 
   BezierCurve result = curve;

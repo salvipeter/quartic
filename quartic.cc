@@ -126,8 +126,9 @@ void drawCurve()
   if(curve.cp.empty())
     return;
 
-  if (approximation_type == PROXIMITY_DISPLACEMENT) {
-    auto base = BSplineCurve::approximateUniformCubic(points);
+  if (approximation_type == PROXIMITY_FIT ||
+      approximation_type == PROXIMITY_DISPLACEMENT) {
+    auto base = BSplineCurve::uniformCubic(points);
     glLineWidth(1.5);
     glColor3d(0.0, 0.5, 0.5);
     glBegin(GL_LINES);
