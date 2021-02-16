@@ -161,6 +161,27 @@ BezierCurve BezierCurve::elevate() const {
   return result;
 }
 
+BezierCurve BezierCurve::interpolateUniform(const PointVector &points) {
+  BezierCurve result;
+  result.n = points.size() - 1;
+  Eigen::MatrixXd A = Eigen::MatrixXd::Zero(points.size(), points.size());
+  Eigen::MatrixXd b = Eigen::MatrixXd::Zero(points.size(), 3);
+  for (size_t i = 0; i < points.size(); ++i) {
+    double u = (double)i / result.n;
+    DoubleVector coeff;
+    bernsteinAll(result.n, u, coeff);
+    for (size_t j = 0; j <= result.n; ++j)
+      A(i, j) = coeff[j];
+    b(i, 0) = points[i].x;
+    b(i, 1) = points[i].y;
+    b(i, 2) = points[i].z;
+  }
+  Eigen::MatrixXd x = A.fullPivLu().solve(b);
+  for(size_t i = 0; i <= result.n; ++i)
+    result.cp.push_back(Point(x(i, 0), x(i, 1), x(i, 2)));
+  return result;
+}
+
 size_t BSplineCurve::findSpan(double u) const
 {
   if(u == knots[n+1])
@@ -1001,40 +1022,31 @@ BSplineCurve BSplineCurve::proximityDisplacement(PointVector const &points, size
 
 #else  // !UNIFORM_SUBDIVISION
 
-
 BSplineCurve BSplineCurve::proximityDisplacement(PointVector const &points, size_t depth,
                                                  double alpha) {
   // Original curve
   BezierCurve curve;
   curve.n = points.size() - 1;
   curve.cp = points;
+  auto bsp = bezierToBSpline(curve);
 
-  // Prepare the elevated curve
   BezierCurve result = curve;
-  for (size_t i = 0; i < depth; ++i)
+  for (size_t i = 0; i < depth; ++i) {
     result = result.elevate();
 
-  // Compute displacement bases
-  VectorVector displacements;
-  for (size_t i = 0; i <= result.n; ++i) {
-    double u = (double)i / result.n;
-    DoubleVector coeff; curve.bernsteinAll(curve.n, u, coeff);
-    Vector v(0, 0, 0);
-    for (size_t j = 0; j <= curve.n; ++j)
-      v += (curve.cp[j] - curve.evaluate((double)j / curve.n)) * alpha * coeff[j];
-    displacements.push_back(v);
-  }
+    // Create displacements
+    VectorVector displacements;
+    for (size_t i = 0; i <= result.n; ++i) {
+      double u = (double)i / result.n;
+      displacements.push_back((controlFramePoint(bsp, u) - result.evaluate(u)) * alpha);
+    }
 
-  // Add displacements
-  for (size_t i = 0; i <= result.n; ++i) {
-    double u = (double)i / result.n;
-    DoubleVector coeff; result.bernsteinAll(result.n, u, coeff);
-    Vector v(0, 0, 0);
-    for (size_t j = 0; j <= result.n; ++j)
-      v += displacements[j] * coeff[j];
-    result.cp[i] += v;
+    // Add displacements
+    for (size_t i = 0; i <= result.n; ++i)
+      result.cp[i] += displacements[i];
   }
 
   return bezierToBSpline(result);
 }
+
 #endif // UNIFORM_SUBDIVISION

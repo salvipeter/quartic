@@ -26,6 +26,7 @@ struct BezierCurve
   Point derivativesByControlPoints(double u, size_t d, VectorVector &der) const;
   bool hasInflections() const;
   BezierCurve elevate() const;
+  static BezierCurve interpolateUniform(const PointVector &points);
 };
 
 struct BSplineCurve
