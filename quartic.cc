@@ -56,7 +56,7 @@ struct SavedPoints {
   DoubleVector params;
   PointVector points;
 } saved_points;
-double curvature_magnification = 0.1;
+double curvature_magnification = 0.025;
 size_t depth = 0;
 double alpha = 0;
 

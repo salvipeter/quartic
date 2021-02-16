@@ -25,6 +25,7 @@ struct BezierCurve
   static void bernsteinAll(size_t n, double u, DoubleMatrix &coeff);
   Point derivativesByControlPoints(double u, size_t d, VectorVector &der) const;
   bool hasInflections() const;
+  BezierCurve elevate() const;
 };
 
 struct BSplineCurve
