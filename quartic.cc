@@ -4,6 +4,7 @@
 #include <cstring>
 #include <fstream>
 #include <iostream>
+#include <memory>
 #include <sstream>
 #include <string>
 #include <vector>
@@ -128,13 +129,17 @@ void drawCurve()
 
   if (approximation_type == PROXIMITY_FIT ||
       approximation_type == PROXIMITY_DISPLACEMENT) {
-    auto base = BSplineCurve::uniformCubic(points);
+    std::unique_ptr<Curve> base;
+    if (approximation_type == PROXIMITY_FIT)
+      base = std::make_unique<BSplineCurve>(BSplineCurve::uniformCubic(points));
+    else
+      base = std::make_unique<PBezierCurve>(points, std::max(0.0, std::min(1.0, 1.0 - alpha)));
     glLineWidth(1.5);
     glColor3d(0.0, 0.5, 0.5);
     glBegin(GL_LINES);
     for(int i = 0; i <= 100; ++i) {
       double u = (double)i / 100.0;
-      Point p = base.evaluate(u);
+      Point p = base->evaluate(u);
       glVertex3d(p.x, p.y, p.z);
     }
     glEnd();

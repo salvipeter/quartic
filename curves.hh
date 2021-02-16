@@ -10,7 +10,13 @@ typedef std::vector<double> DoubleVector;
 typedef std::vector<DoubleVector> DoubleMatrix;
 typedef std::vector<PointVector> PointMatrix;
 
-struct BezierCurve
+struct Curve
+{
+  virtual Point evaluate(double u) const = 0;
+  virtual ~Curve() { }
+};
+
+struct BezierCurve : public Curve
 {
   size_t n;                     // degree => n + 1 control points
   PointVector cp;               // control points
@@ -18,7 +24,7 @@ struct BezierCurve
   static double bernstein(size_t i, size_t n, double u);
   Point evaluateOneByOne(double u) const;
   static void bernsteinAll(size_t n, double u, DoubleVector &coeff);
-  Point evaluate(double u) const;
+  Point evaluate(double u) const override;
   Point evaluateWithCachedCofficients(DoubleVector const &coeff) const;
   Point evaluateByDeCasteljau(double u) const;
   void derivativeControlPoints(size_t d, PointMatrix &dcp) const;
@@ -29,7 +35,7 @@ struct BezierCurve
   static BezierCurve interpolateUniform(const PointVector &points);
 };
 
-struct BSplineCurve
+struct BSplineCurve : public Curve
 {
   size_t p;                     // degree
   size_t n;                     // n + 1 = cp.size()
@@ -38,7 +44,7 @@ struct BSplineCurve
 
   size_t findSpan(double u) const;
   void basisFunctions(size_t i, double u, DoubleVector &coeff) const;
-  Point evaluate(double u) const;
+  Point evaluate(double u) const override;
   void basisFunctionDerivatives(size_t i, double u, size_t d, DoubleMatrix &der) const;
   Point derivatives(double u, size_t d, VectorVector &der) const;
   void derivativeControlPoints(size_t d, size_t r1, size_t r2, PointMatrix &dcp) const;
@@ -68,4 +74,14 @@ struct BSplineCurve
   static BSplineCurve proximity(PointVector const &points, size_t depth, double alpha);
   static BSplineCurve proximityFit(PointVector const &points, size_t depth, double alpha);
   static BSplineCurve proximityDisplacement(PointVector const &points, size_t depth, double alpha);
+};
+
+struct PBezierCurve : public Curve
+{
+  size_t n;                     // degree => n + 1 control points
+  PointVector cp;               // control points
+  double gamma;                 // proximity - 1 for Bezier, 0 for control polygon
+
+  PBezierCurve(const PointVector &cp, double gamma);
+  Point evaluate(double u) const override;
 };

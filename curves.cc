@@ -977,8 +977,8 @@ BSplineCurve BSplineCurve::proximityDisplacement(PointVector const &points, size
   BezierCurve curve;
   curve.n = points.size() - 1;
   curve.cp = points;
-  auto base = uniformCubic(points);
-  // auto bsp = bezierToBSpline(curve);
+  // auto base = uniformCubic(points);
+  PBezierCurve base(points, std::max(0.0, std::min(1.0, 1.0 - alpha)));
 
   BezierCurve result = curve;
   for (size_t i = 0; i < depth; ++i) {
@@ -988,8 +988,8 @@ BSplineCurve BSplineCurve::proximityDisplacement(PointVector const &points, size
     VectorVector displacements;
     for (size_t i = 0; i <= result.n; ++i) {
       double u = (double)i / result.n;
-      // displacements.push_back((controlFramePoint(bsp, u) - result.evaluate(u)) * alpha);
-      displacements.push_back((base.evaluate(u) - result.evaluate(u)) * alpha);
+      // displacements.push_back((base.evaluate(u) - result.evaluate(u)) * alpha);
+      displacements.push_back(base.evaluate(u) - result.evaluate(u));
     }
 
     // Add displacements
@@ -1002,4 +1002,37 @@ BSplineCurve BSplineCurve::proximityDisplacement(PointVector const &points, size
   }
 
   return bezierToBSpline(result);
+}
+
+PBezierCurve::PBezierCurve(const PointVector &cp, double gamma)
+  : n(cp.size() - 1), cp(cp), gamma(gamma)
+{
+}
+
+Point PBezierCurve::evaluate(double u) const {
+  Point result(0, 0, 0);
+  DoubleVector coeff;
+  BezierCurve::bernsteinAll(n, u, coeff);
+
+  // Compute r
+  DoubleVector r;
+  for (size_t i = 0; i <= n; ++i) {
+    double ui = (double)i / n;
+    double sum = 0;
+    for (size_t j = 0; j < i; ++j)
+      sum += (i - j) * coeff[j];
+    double fi = std::pow(u - ui + 2.0 / n * sum, 2) - std::pow(u - ui, 2);
+    r.push_back(std::sqrt(std::pow(ui - u, 2) + gamma * fi));
+  }
+
+  // Compute M
+  DoubleVector M;
+  M.push_back(0.5 + (r[1] - r[0]) * n / 2);
+  for (size_t i = 1; i < n; ++i)
+    M.push_back((r[i+1] - 2 * r[i] + r[i-1]) * n / 2);
+  M.push_back(0.5 - (r[n] - r[n-1]) * n / 2);
+
+  for (size_t i = 0; i <= n; ++i)
+    result += cp[i] * M[i];
+  return result;
 }
