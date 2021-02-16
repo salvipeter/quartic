@@ -201,20 +201,24 @@ void drawCurve()
   }
   glEnd();
 
-  // Segments with inflections
-  glColor3d(0.0, 0.5, 0.0);
-  glLineWidth(3.0);
-  std::list<BezierCurve> list = curve.convertToBezierCurves();
-  for (std::list<BezierCurve>::const_iterator i = list.begin(), ie = list.end(); i != ie; ++i)
-    if (i->hasInflections()) {
-      glBegin(GL_LINE_STRIP);
-      for(size_t j = 0, je = resolution / list.size(); j < je; ++j) {
-        double const t = (double)j / (double)(je - 1);
-        Point p = i->evaluate(t);
-        glVertex3d(p.x, p.y, p.z);
+  if (approximation_type != PROXIMITY &&
+      approximation_type != PROXIMITY_FIT &&
+      approximation_type != PROXIMITY_DISPLACEMENT) {
+    // Segments with inflections
+    glColor3d(0.0, 0.5, 0.0);
+    glLineWidth(3.0);
+    std::list<BezierCurve> list = curve.convertToBezierCurves();
+    for (std::list<BezierCurve>::const_iterator i = list.begin(), ie = list.end(); i != ie; ++i)
+      if (i->hasInflections()) {
+        glBegin(GL_LINE_STRIP);
+        for(size_t j = 0, je = resolution / list.size(); j < je; ++j) {
+          double const t = (double)j / (double)(je - 1);
+          Point p = i->evaluate(t);
+          glVertex3d(p.x, p.y, p.z);
+        }
+        glEnd();
       }
-      glEnd();
-    }
+  }
 }
 
 void drawInfo()
