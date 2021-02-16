@@ -889,10 +889,10 @@ static PointVector sampleCurve(const BSplineCurve &curve, size_t resolution) {
 }
 
 // Assumes uniform parameters
-static BezierCurve fitBezier(const PointVector &points, size_t degree, double alpha) {
+static BezierCurve fitBezier(const BezierCurve &curve, const PointVector &points, double alpha) {
   size_t resolution = points.size();
-  BezierCurve result;
-  result.n = degree;
+  BezierCurve result = curve;
+  size_t degree = result.n;
 
   Eigen::MatrixXd N = Eigen::MatrixXd::Zero(resolution + degree - 1, degree + 1);
   Eigen::MatrixXd S = Eigen::MatrixXd::Zero(resolution + degree - 1, 3);
@@ -907,9 +907,10 @@ static BezierCurve fitBezier(const PointVector &points, size_t degree, double al
   }
   double smoothing = alpha / 10.0;
   for (size_t i = 1; i < degree; ++i) {
-    N(resolution + i - 1, i - 1) = smoothing;
-    N(resolution + i - 1, i) = -2 * smoothing;
-    N(resolution + i - 1, i + 1) = smoothing;
+    N(resolution + i - 1, i) = smoothing;
+    S(resolution + i - 1, 0) = result.cp[i].x;
+    S(resolution + i - 1, 1) = result.cp[i].y;
+    S(resolution + i - 1, 2) = result.cp[i].z;
   }
 
   // Fill the control points
@@ -939,7 +940,12 @@ BSplineCurve BSplineCurve::proximityFit(PointVector const &points, size_t depth,
   const size_t resolution = 100;
   auto base = approximateUniformCubic(points);
   auto data = sampleCurve(base, resolution);
-  auto result = fitBezier(data, points.size() + depth, alpha);
+  BezierCurve result;
+  result.n = points.size() - 1;
+  result.cp = points;
+  for (size_t i = 0; i < depth; ++i)
+    result = result.elevate();
+  result = fitBezier(result, data, alpha);
   return bezierToBSpline(result);
 }
 
