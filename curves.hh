@@ -73,7 +73,8 @@ struct BSplineCurve : public Curve
   static BSplineCurve uniformCubic(const PointVector &points);
   static BSplineCurve proximity(PointVector const &points, size_t depth, double alpha);
   static BSplineCurve proximityFit(PointVector const &points, size_t depth, double alpha);
-  static BSplineCurve proximityDisplacement(PointVector const &points, size_t depth, double alpha);
+  static BSplineCurve proximityDisplacement(PointVector const &points, size_t depth, double alpha,
+                                            size_t iterations);
 };
 
 struct PBezierCurve : public Curve

@@ -972,7 +972,7 @@ static void fillPoints(BezierCurve &curve, size_t degree, size_t k) {
 }
 
 BSplineCurve BSplineCurve::proximityDisplacement(PointVector const &points, size_t depth,
-                                                 double alpha) {
+                                                 double alpha, size_t iterations) {
   // Original curve
   BezierCurve curve;
   curve.n = points.size() - 1;
@@ -984,21 +984,23 @@ BSplineCurve BSplineCurve::proximityDisplacement(PointVector const &points, size
   for (size_t i = 0; i < depth; ++i) {
     result = result.elevate();
 
-    // Create displacements
-    VectorVector displacements;
-    for (size_t i = 0; i <= result.n; ++i) {
-      double u = (double)i / result.n;
-      // displacements.push_back((base.evaluate(u) - result.evaluate(u)) * alpha);
-      displacements.push_back(base.evaluate(u) - result.evaluate(u));
-    }
+    for (size_t iter = 0; iter < iterations; ++iter) {
+      // Create displacements
+      VectorVector displacements;
+      for (size_t i = 0; i <= result.n; ++i) {
+        double u = (double)i / result.n;
+        // displacements.push_back((base.evaluate(u) - result.evaluate(u)) * alpha);
+        displacements.push_back(base.evaluate(u) - result.evaluate(u));
+      }
 
-    // Add displacements
-    auto d1 = (result.cp[1] - result.cp[0]).unit();
-    result.cp[1] += d1 * (displacements[1] * d1);
-    auto d2 = (result.cp[result.n-1] - result.cp[result.n]).unit();
-    result.cp[result.n-1] += d2 * (displacements[result.n-1] * d2);
-    for (size_t i = 2; i < result.n - 1; ++i)
-      result.cp[i] += displacements[i];
+      // Add displacements
+      auto d1 = (result.cp[1] - result.cp[0]).unit();
+      result.cp[1] += d1 * (displacements[1] * d1);
+      auto d2 = (result.cp[result.n-1] - result.cp[result.n]).unit();
+      result.cp[result.n-1] += d2 * (displacements[result.n-1] * d2);
+      for (size_t i = 2; i < result.n - 1; ++i)
+        result.cp[i] += displacements[i];
+    }
   }
 
   return bezierToBSpline(result);
