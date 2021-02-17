@@ -561,6 +561,14 @@ void mouseMotion(int x, int y)
 
 int buildPopupMenu()
 {
+  int prox_options = glutCreateMenu(executeCommand);
+  glutAddMenuEntry("Increase proximity\t(+)", MENU_INC_DEPTH);
+  glutAddMenuEntry("Decrease proximity\t(-)", MENU_DEC_DEPTH);
+  glutAddMenuEntry("Decrease prox. alpha\t(8)", MENU_DEC_ALPHA);
+  glutAddMenuEntry("Increase prox. alpha\t(9)", MENU_INC_ALPHA);
+  glutAddMenuEntry("Default prox. alpha\t(0)", MENU_DEFAULT_ALPHA);
+  glutAddMenuEntry("More iterations\t(I)", MENU_INC_ITERATION);
+  glutAddMenuEntry("Less iterations\t(i)", MENU_DEC_ITERATION);
   int menu = glutCreateMenu(executeCommand);
   glutAddMenuEntry("Reset\t(r)", MENU_RESET);
   glutAddMenuEntry("Delete last point\t(d)", MENU_DELETE_LAST);
@@ -582,13 +590,7 @@ int buildPopupMenu()
   glutAddMenuEntry("Proximity Bezier curve\t(b)", MENU_PROXIMITY);
   glutAddMenuEntry("Proximity Bezier fit\t(f)", MENU_PROXIMITY_FIT);
   glutAddMenuEntry("Proximity w/displacement\t(D)", MENU_PROXIMITY_DISPLACEMENT);
-  glutAddMenuEntry("Increase proximity\t(+)", MENU_INC_DEPTH);
-  glutAddMenuEntry("Decrease proximity\t(-)", MENU_DEC_DEPTH);
-  glutAddMenuEntry("Decrease prox. alpha\t(8)", MENU_DEC_ALPHA);
-  glutAddMenuEntry("Increase prox. alpha\t(9)", MENU_INC_ALPHA);
-  glutAddMenuEntry("Default prox. alpha\t(0)", MENU_DEFAULT_ALPHA);
-  glutAddMenuEntry("More iterations\t(I)", MENU_INC_ITERATION);
-  glutAddMenuEntry("Less iterations\t(i)", MENU_DEC_ITERATION);
+  glutAddSubMenu("Proximity options", prox_options);
   glutAddMenuEntry("----", -1);
   glutAddMenuEntry("Load clubs\t(L)", MENU_LOAD);
   glutAddMenuEntry("Save clubs\t(S)", MENU_SAVE);
