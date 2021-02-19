@@ -1004,11 +1004,27 @@ BSplineCurve BSplineCurve::proximityDisplacement(PointVector const &points, size
       }
 
       // Add displacements
+
+      // Special case: first control points
       auto d1 = (result.cp[1] - result.cp[0]).unit();
       result.cp[1] += d1 * (displacements[1] * d1);
-      auto d2 = (result.cp[result.n-1] - result.cp[result.n]).unit();
-      result.cp[result.n-1] += d2 * (displacements[result.n-1] * d2);
-      for (size_t i = 2; i < result.n - 1; ++i)
+      auto d2 = result.cp[2] + displacements[2] - result.cp[1];
+      // if ((d1 ^ (curve.cp[2] - curve.cp[1])).z * (d1 ^ d2).z < 0)
+      //   result.cp[2] = result.cp[1] + d1 * (d2 * d1);
+      // else
+        result.cp[2] += displacements[2];
+      
+      // Special case: last control points
+      d1 = (result.cp.rbegin()[1] - result.cp.back()).unit();
+      result.cp.rbegin()[1] += d1 * (displacements.rbegin()[1] * d1);
+      d2 = result.cp.rbegin()[2] + displacements.rbegin()[2] - result.cp.rbegin()[1];
+      // if ((d1 ^ (curve.cp.rbegin()[2] - curve.cp.rbegin()[1])).z * (d1 ^ d2).z < 0)
+      //   result.cp.rbegin()[2] = result.cp.rbegin()[1] + d1 * (d2 * d1);
+      // else
+        result.cp.rbegin()[2] += displacements.rbegin()[2];
+
+      // General case
+      for (size_t i = 3; i <= result.n - 3; ++i)
         result.cp[i] += displacements[i];
     }
   }
