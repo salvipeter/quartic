@@ -131,6 +131,11 @@ void drawCurve()
 
   if (approximation_type == PROXIMITY_FIT ||
       approximation_type == PROXIMITY_DISPLACEMENT) {
+    glBegin(GL_LINE_STRIP);
+    for(PointVector::const_iterator i = points.begin(); i != points.end(); ++i)
+      glVertex3d(i->x, i->y, i->z);
+    glEnd();
+
     std::unique_ptr<Curve> base;
     if (approximation_type == PROXIMITY_FIT)
       base = std::make_unique<BSplineCurve>(BSplineCurve::uniformCubic(points));
@@ -402,9 +407,14 @@ void executeCommand(int command)
   case MENU_INTERPOLATE_SKETCHES: approximation_type = INTERP_SKETCHES; reconstructCurve(); break;
   case MENU_APPROXIMATE: approximation_type = APPROXIMATE; reconstructCurve(); break;
   case MENU_PROXIMITY: approximation_type = PROXIMITY; depth = alpha = 0; reconstructCurve(); break;
-  case MENU_PROXIMITY_FIT: approximation_type = PROXIMITY_FIT; depth = alpha = 0;
+  case MENU_PROXIMITY_FIT:
+    approximation_type = PROXIMITY_FIT;
+    depth = alpha = 0;
     reconstructCurve(); break;
-  case MENU_PROXIMITY_DISPLACEMENT: approximation_type = PROXIMITY_DISPLACEMENT; depth = alpha = 0;
+  case MENU_PROXIMITY_DISPLACEMENT:
+    approximation_type = PROXIMITY_DISPLACEMENT;
+    depth = alpha = 0;
+    prox_iterations = 1;
     reconstructCurve(); break;
   case MENU_INC_DEPTH: depth++; reconstructCurve(); break;
   case MENU_DEC_DEPTH: if (depth) depth--; reconstructCurve(); break;

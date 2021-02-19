@@ -917,7 +917,17 @@ static BezierCurve fitBezier(const BezierCurve &curve, const PointVector &points
   for (size_t i = 1; i < degree; ++i)
     result.cp[i] = { x(i, 0), x(i, 1), x(i, 2) };
 
-  std::cout << "Error: " << (N * x - S).norm() << std::endl;
+#ifdef DEBUG
+  double axis = 2.0 * sqrt(2);
+  std::cerr << "Error: " << (N * x - S).norm() * 100 / axis << '%' << std::endl;
+  double dmax = 0;
+  for (size_t i = 0; i < result.n; ++i) {
+    double d = (result.cp[i+1] - result.cp[i]).norm();
+    if (d > dmax)
+      dmax = d;
+  }
+  std::cerr << "Longest segment: " << dmax * 100 / axis << '%' << std::endl;
+#endif
 
   return result;
 }
@@ -1002,6 +1012,26 @@ BSplineCurve BSplineCurve::proximityDisplacement(PointVector const &points, size
         result.cp[i] += displacements[i];
     }
   }
+
+#ifdef DEBUG
+  size_t resolution = 100;
+  double dmax = 0;
+  for (size_t i = 0; i <= resolution; ++i) {
+    double u = (double)i / resolution;
+    double d = (base.evaluate(u) - result.evaluate(u)).norm();
+    if (d > dmax)
+      dmax = d;
+  }
+  double axis = 2.0 * sqrt(2);
+  std::cerr << "Error: " << dmax * 100 / axis << '%' << std::endl;
+  dmax = 0;
+  for (size_t i = 0; i < result.n; ++i) {
+    double d = (result.cp[i+1] - result.cp[i]).norm();
+    if (d > dmax)
+      dmax = d;
+  }
+  std::cerr << "Longest segment: " << dmax * 100 / axis << '%' << std::endl;
+#endif
 
   return bezierToBSpline(result);
 }
