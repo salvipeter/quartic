@@ -496,7 +496,9 @@ void keyboard(unsigned char key, int x, int y)
     case 'b' : executeCommand(MENU_PROXIMITY); break;
     case 'f' : executeCommand(MENU_PROXIMITY_FIT); break;
     case 'D' : executeCommand(MENU_PROXIMITY_DISPLACEMENT); break;
+    case '2' :
     case '+' : executeCommand(MENU_INC_DEPTH); break;
+    case '1' :
     case '-' : executeCommand(MENU_DEC_DEPTH); break;
     case '8' : executeCommand(MENU_DEC_ALPHA); break;
     case '9' : executeCommand(MENU_INC_ALPHA); break;
@@ -572,8 +574,8 @@ void mouseMotion(int x, int y)
 int buildPopupMenu()
 {
   int prox_options = glutCreateMenu(executeCommand);
-  glutAddMenuEntry("Increase proximity\t(+)", MENU_INC_DEPTH);
-  glutAddMenuEntry("Decrease proximity\t(-)", MENU_DEC_DEPTH);
+  glutAddMenuEntry("Increase proximity\t(+/2)", MENU_INC_DEPTH);
+  glutAddMenuEntry("Decrease proximity\t(-/1)", MENU_DEC_DEPTH);
   glutAddMenuEntry("Decrease prox. alpha\t(8)", MENU_DEC_ALPHA);
   glutAddMenuEntry("Increase prox. alpha\t(9)", MENU_INC_ALPHA);
   glutAddMenuEntry("Default prox. alpha\t(0)", MENU_DEFAULT_ALPHA);
