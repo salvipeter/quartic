@@ -4,6 +4,7 @@
 #include <cassert>
 #include <iostream>
 #include <limits>
+#include <optional>
 
 #include <Eigen/LU>
 
@@ -981,8 +982,88 @@ static void fillPoints(BezierCurve &curve, size_t degree, size_t k) {
   }
 }
 
+static bool rightTurn(const Point &a, const Point &b, const Point &c) {
+  auto u = b - a, v = c - a;
+  return u.x * v.y < u.y * v.x;
+}
+
+static PointVector convexHull(PointVector points) {
+  size_t n = points.size();
+  std::sort(points.begin(), points.end(),
+            [](const Point &p, const Point &q) {
+              return p.x < q.x || (p.x == q.x && p.y < q.y);
+            });
+  PointVector hull = { points[0], points[1] };
+  for (size_t i = 2; i < n; ++i) {
+    while (hull.size() >= 2 && !rightTurn(hull.rbegin()[1], hull.back(), points[i]))
+      hull.pop_back();
+    hull.push_back(points[i]);
+  }
+  PointVector lower = { points.back(), points.rbegin()[1] };
+  for (size_t i = 3; i <= n; ++i) {
+    while (lower.size() >= 2 && !rightTurn(lower.rbegin()[1], lower.back(), points[n-i]))
+      lower.pop_back();
+    lower.push_back(points[n-i]);
+  }
+  lower.pop_back();
+  hull.insert(hull.end(), lower.begin() + 1, lower.end());
+  return hull;
+}
+
+std::optional<Point> segmentIntersection(const Point &a, const Point &b,
+                                         const Point &c, const Point &d) {
+  // When the segments have a shared part,
+  // this function returns the closest common point to `b`.
+  constexpr double eps2 = 1e-10;
+  auto A = b - a, C = d - c;
+  auto D = A.x * C.y - C.x * A.y;
+  if (std::pow(D, 2) < eps2 * (A * A) * (C * C)) {
+    // Parallel lines
+    auto E = c - a;
+    if (std::pow(E.x * A.y - E.y * A.x, 2) < eps2 * (E * E) * (A * A)) {
+      auto s0 = A * E / (A * A), s1 = s0 + A * C / (A * A);
+      auto smax = std::max(s0, s1);
+      if (smax >= 1) {
+        if (std::min(s0, s1) <= 1)
+          return b;
+      } else if (smax >= 0)
+        return a + A * smax;
+    }
+    return std::nullopt;
+  }
+  auto s = (a.x * (d.y - c.y) + c.x * (a.y - d.y) + d.x * (c.y - a.y)) / D;
+  auto t = (a.x * (c.y - b.y) + b.x * (a.y - c.y) + c.x * (b.y - a.y)) / D;
+  if (s < 0 || s > 1 || t < 0 || t > 1)
+    return std::nullopt;
+  return a + A * s;             // = c + C * t
+}
+
+static bool insideHull(const PointVector &hull, const Point &p) {
+  size_t n = hull.size();
+  for (size_t i = 0; i < n; ++i)
+    if (!rightTurn(hull[i], hull[(i+1)%n], p))
+      return false;
+  return true;
+}
+
+static Point displacementInCHull(const PointVector &hull, const Point &p, const Vector &d) {
+  auto q = p + d;
+  if (insideHull(hull, q))
+    return q;
+  size_t n = hull.size();
+  for (size_t i = 0; i < n; ++i) {
+    size_t j = (i + 1) % n;
+    auto x = segmentIntersection(p, q, hull[i], hull[j]);
+    if (x)
+      return x.value();
+  }
+  return p;
+}
+
 BSplineCurve BSplineCurve::proximityDisplacement(PointVector const &points, size_t depth,
                                                  double alpha, size_t iterations) {
+  // Compute convex hull
+  auto hull = convexHull(points);
   // Original curve
   BezierCurve curve;
   curve.n = points.size() - 1;
@@ -1007,25 +1088,15 @@ BSplineCurve BSplineCurve::proximityDisplacement(PointVector const &points, size
 
       // Special case: first control points
       auto d1 = (result.cp[1] - result.cp[0]).unit();
-      result.cp[1] += d1 * (displacements[1] * d1);
-      auto d2 = result.cp[2] + displacements[2] - result.cp[1];
-      // if ((d1 ^ (curve.cp[2] - curve.cp[1])).z * (d1 ^ d2).z < 0)
-      //   result.cp[2] = result.cp[1] + d1 * (d2 * d1);
-      // else
-        result.cp[2] += displacements[2];
+      displacements[1] = d1 * (displacements[1] * d1);
       
       // Special case: last control points
       d1 = (result.cp.rbegin()[1] - result.cp.back()).unit();
-      result.cp.rbegin()[1] += d1 * (displacements.rbegin()[1] * d1);
-      d2 = result.cp.rbegin()[2] + displacements.rbegin()[2] - result.cp.rbegin()[1];
-      // if ((d1 ^ (curve.cp.rbegin()[2] - curve.cp.rbegin()[1])).z * (d1 ^ d2).z < 0)
-      //   result.cp.rbegin()[2] = result.cp.rbegin()[1] + d1 * (d2 * d1);
-      // else
-        result.cp.rbegin()[2] += displacements.rbegin()[2];
+      displacements.rbegin()[1] = d1 * (displacements.rbegin()[1] * d1);
 
       // General case
-      for (size_t i = 3; i <= result.n - 3; ++i)
-        result.cp[i] += displacements[i];
+      for (size_t i = 1; i < result.n; ++i)
+        result.cp[i] = displacementInCHull(hull, result.cp[i], displacements[i]);
     }
   }
 
