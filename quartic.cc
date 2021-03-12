@@ -256,7 +256,7 @@ void drawInfo()
       if (alpha)
         s << alpha;
       else
-        s << "1/3";
+        s << "2/3";
       s_param = s.str();
     }
     s_interp = "Pro: sub";
