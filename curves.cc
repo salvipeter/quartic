@@ -860,6 +860,17 @@ BSplineCurve BSplineCurve::proximity(PointVector const &points, size_t depth, do
   return bezierToBSpline(result);
 }
 
+BSplineCurve BSplineCurve::proximityMultiplicity(PointVector const &points, size_t depth) {
+  size_t n = points.size();
+  BezierCurve result;
+  result.n = (n - 2) * (depth + 1) + 1;
+  result.cp.push_back(points.front());
+  for (size_t i = 1; i < n - 1; ++i)
+    std::fill_n(std::back_inserter(result.cp), depth + 1, points[i]);
+  result.cp.push_back(points.back());
+  return bezierToBSpline(result);
+}
+
 [[maybe_unused]]
 static Point controlFramePoint(const BSplineCurve &curve, double u) {
   if (u >= curve.knots[curve.knots.size() - curve.p - 1])

@@ -21,7 +21,7 @@
 size_t degree = 3;
 enum ApproximationType {
   INTERP_PIEGL_SIMPLE, INTERP_PIEGL_PARABOLA, INTERP_SKETCHES, APPROXIMATE,
-  PROXIMITY, PROXIMITY_FIT, PROXIMITY_DISPLACEMENT
+  PROXIMITY, PROXIMITY_MULTIPLICITY, PROXIMITY_FIT, PROXIMITY_DISPLACEMENT
 } approximation_type = INTERP_SKETCHES;
 size_t const approximation_complexity = 5;
 bool show_curvature = false;
@@ -39,7 +39,8 @@ enum MenuCommand { MENU_RESET, MENU_DELETE_LAST, MENU_CUBIC, MENU_QUARTIC, MENU_
                    MENU_PARAM_ARC, MENU_PARAM_CENTRIPETAL,
                    MENU_INTERPOLATE_SIMPLE, MENU_INTERPOLATE_PARABOLA, MENU_INTERPOLATE_SKETCHES,
                    MENU_APPROXIMATE,
-                   MENU_PROXIMITY, MENU_PROXIMITY_FIT, MENU_PROXIMITY_DISPLACEMENT,
+                   MENU_PROXIMITY, MENU_PROXIMITY_MULTIPLICITY, MENU_PROXIMITY_FIT,
+                   MENU_PROXIMITY_DISPLACEMENT,
                    MENU_INC_DEPTH, MENU_DEC_DEPTH,
                    MENU_INC_ALPHA, MENU_DEC_ALPHA, MENU_DEFAULT_ALPHA,
                    MENU_INC_ITERATION, MENU_DEC_ITERATION,
@@ -209,6 +210,7 @@ void drawCurve()
   glEnd();
 
   if (approximation_type != PROXIMITY &&
+      approximation_type != PROXIMITY_MULTIPLICITY &&
       approximation_type != PROXIMITY_FIT &&
       approximation_type != PROXIMITY_DISPLACEMENT) {
     // Segments with inflections
@@ -260,6 +262,15 @@ void drawInfo()
       s_param = s.str();
     }
     s_interp = "Pro: sub";
+    break;
+  case PROXIMITY_MULTIPLICITY:
+    {
+      std::ostringstream s;
+      s << "Deg: " << curve.n;
+      s_degree = s.str();
+    }
+    s_param = "";
+    s_interp = "Pro: mul";
     break;
   case PROXIMITY_FIT:
     {
@@ -380,6 +391,9 @@ void reconstructCurve()
   case PROXIMITY:
     curve = BSplineCurve::proximity(points, depth, alpha);
     break;
+  case PROXIMITY_MULTIPLICITY:
+    curve = BSplineCurve::proximityMultiplicity(points, depth);
+    break;
   case PROXIMITY_FIT:
     curve = BSplineCurve::proximityFit(points, depth, alpha);
     break;
@@ -407,6 +421,10 @@ void executeCommand(int command)
   case MENU_INTERPOLATE_SKETCHES: approximation_type = INTERP_SKETCHES; reconstructCurve(); break;
   case MENU_APPROXIMATE: approximation_type = APPROXIMATE; reconstructCurve(); break;
   case MENU_PROXIMITY: approximation_type = PROXIMITY; depth = alpha = 0; reconstructCurve(); break;
+  case MENU_PROXIMITY_MULTIPLICITY: approximation_type = PROXIMITY_MULTIPLICITY;
+    depth = 0;
+    reconstructCurve();
+    break;
   case MENU_PROXIMITY_FIT:
     approximation_type = PROXIMITY_FIT;
     depth = alpha = 0;
@@ -494,6 +512,7 @@ void keyboard(unsigned char key, int x, int y)
     case 's' : executeCommand(MENU_INTERPOLATE_SKETCHES); break;
     case 'A' : executeCommand(MENU_APPROXIMATE); break;
     case 'b' : executeCommand(MENU_PROXIMITY); break;
+    case 'm' : executeCommand(MENU_PROXIMITY_MULTIPLICITY); break;
     case 'f' : executeCommand(MENU_PROXIMITY_FIT); break;
     case 'D' : executeCommand(MENU_PROXIMITY_DISPLACEMENT); break;
     case '2' :
@@ -599,7 +618,8 @@ int buildPopupMenu()
   glutAddMenuEntry("Interpolation: Sketches\t(s)", MENU_INTERPOLATE_SKETCHES);
   glutAddMenuEntry("Approximation\t(A)", MENU_APPROXIMATE);
   glutAddMenuEntry("----", -1);
-  glutAddMenuEntry("Proximity Bezier curve\t(b)", MENU_PROXIMITY);
+  glutAddMenuEntry("Proximity Bezier subdivision\t(b)", MENU_PROXIMITY);
+  glutAddMenuEntry("Proximity Bezier multiplicity\t(m)", MENU_PROXIMITY_MULTIPLICITY);
   glutAddMenuEntry("Proximity Bezier fit\t(f)", MENU_PROXIMITY_FIT);
   glutAddMenuEntry("Proximity w/displacement\t(D)", MENU_PROXIMITY_DISPLACEMENT);
   glutAddSubMenu("Proximity options", prox_options);
