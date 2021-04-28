@@ -76,6 +76,8 @@ struct BSplineCurve : public Curve
   static BSplineCurve proximityFit(PointVector const &points, size_t depth, double alpha);
   static BSplineCurve proximityDisplacement(PointVector const &points, size_t depth, double alpha,
                                             size_t iterations);
+  static BSplineCurve proximitySlider(PointVector const &points, size_t depth);
+  static BSplineCurve proximityRational(PointVector const &points, size_t depth);
 };
 
 struct PBezierCurve : public Curve

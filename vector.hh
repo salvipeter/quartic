@@ -6,6 +6,7 @@ struct Vector
   double x, y, z;
   Vector(double x = 0.0, double y = 0.0, double z = 0.0) : x(x), y(y), z(z) { }
   Vector &operator=(Vector const &p)      { x = p.x; y = p.y; z = p.z; return *this; }
+  double  normSqr()                  const { return x * x + y * y + z * z; }
   double  norm()                     const { return std::sqrt(x * x + y * y + z * z); }
   Vector  unit()                     const { return (*this) / norm(); }
   void    normalize()                      { (*this) = unit(); }

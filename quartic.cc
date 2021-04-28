@@ -21,7 +21,8 @@
 size_t degree = 3;
 enum ApproximationType {
   INTERP_PIEGL_SIMPLE, INTERP_PIEGL_PARABOLA, INTERP_SKETCHES, APPROXIMATE,
-  PROXIMITY, PROXIMITY_MULTIPLICITY, PROXIMITY_FIT, PROXIMITY_DISPLACEMENT
+  PROXIMITY, PROXIMITY_MULTIPLICITY, PROXIMITY_FIT, PROXIMITY_DISPLACEMENT, PROXIMITY_SLIDER,
+  PROXIMITY_RATIONAL
 } approximation_type = INTERP_SKETCHES;
 size_t const approximation_complexity = 5;
 bool show_curvature = false;
@@ -40,7 +41,7 @@ enum MenuCommand { MENU_RESET, MENU_DELETE_LAST, MENU_CUBIC, MENU_QUARTIC, MENU_
                    MENU_INTERPOLATE_SIMPLE, MENU_INTERPOLATE_PARABOLA, MENU_INTERPOLATE_SKETCHES,
                    MENU_APPROXIMATE,
                    MENU_PROXIMITY, MENU_PROXIMITY_MULTIPLICITY, MENU_PROXIMITY_FIT,
-                   MENU_PROXIMITY_DISPLACEMENT,
+                   MENU_PROXIMITY_DISPLACEMENT, MENU_PROXIMITY_SLIDER, MENU_PROXIMITY_RATIONAL,
                    MENU_INC_DEPTH, MENU_DEC_DEPTH,
                    MENU_INC_ALPHA, MENU_DEC_ALPHA, MENU_DEFAULT_ALPHA,
                    MENU_INC_ITERATION, MENU_DEC_ITERATION,
@@ -131,12 +132,16 @@ void drawCurve()
     return;
 
   if (approximation_type == PROXIMITY_FIT ||
-      approximation_type == PROXIMITY_DISPLACEMENT) {
+      approximation_type == PROXIMITY_DISPLACEMENT ||
+      approximation_type == PROXIMITY_SLIDER) {
     glBegin(GL_LINE_STRIP);
     for(PointVector::const_iterator i = points.begin(); i != points.end(); ++i)
       glVertex3d(i->x, i->y, i->z);
     glEnd();
+  }
 
+  if (approximation_type == PROXIMITY_FIT ||
+      approximation_type == PROXIMITY_DISPLACEMENT) {
     std::unique_ptr<Curve> base;
     if (approximation_type == PROXIMITY_FIT)
       base = std::make_unique<BSplineCurve>(BSplineCurve::uniformCubic(points));
@@ -181,7 +186,10 @@ void drawCurve()
   glColor3d(0.8, 0.5, 0.0);
   glBegin(GL_LINE_STRIP);
   for(PointVector::const_iterator i = curve.cp.begin(); i != curve.cp.end(); ++i)
-    glVertex3d(i->x, i->y, i->z);
+      if (i->z == 0)
+        glVertex3d(i->x, i->y, 0.0);
+      else
+        glVertex3d(i->x / i->z, i->y / i->z, 0.0);
   glEnd();
 
   // control point boxes
@@ -204,7 +212,10 @@ void drawCurve()
 	saved_points.params.push_back(t);
 	saved_points.points.push_back(p);
       }
-      glVertex3d(p.x, p.y, p.z);
+      if (p.z == 0)
+        glVertex3d(p.x, p.y, 0.0);
+      else
+        glVertex3d(p.x / p.z, p.y / p.z, 0.0);
     }
   }
   glEnd();
@@ -303,6 +314,24 @@ void drawInfo()
     }
     s_interp = "Pro: dis";
     break;
+  case PROXIMITY_SLIDER:
+    {
+      std::ostringstream s;
+      s << "Deg: " << curve.n;
+      s_degree = s.str();
+    }
+    s_param = "";
+    s_interp = "Pro: sli";
+    break;
+  case PROXIMITY_RATIONAL:
+    {
+      std::ostringstream s;
+      s << "Wgt: " << depth + 1;
+      s_degree = s.str();
+    }
+    s_param = "";
+    s_interp = "Pro: rat";
+    break;
   }
   glColor3d(0.0, 0.0, 0.0);
   glRasterPos2f(-0.98, 0.92);
@@ -400,6 +429,12 @@ void reconstructCurve()
   case PROXIMITY_DISPLACEMENT:
     curve = BSplineCurve::proximityDisplacement(points, depth, alpha, prox_iterations);
     break;
+  case PROXIMITY_SLIDER:
+    curve = BSplineCurve::proximitySlider(points, depth);
+    break;
+  case PROXIMITY_RATIONAL:
+    curve = BSplineCurve::proximityRational(points, depth);
+    break;
   }
 }
 
@@ -433,6 +468,14 @@ void executeCommand(int command)
     approximation_type = PROXIMITY_DISPLACEMENT;
     depth = alpha = 0;
     prox_iterations = 1;
+    reconstructCurve(); break;
+  case MENU_PROXIMITY_SLIDER:
+    approximation_type = PROXIMITY_SLIDER;
+    depth = 0;
+    reconstructCurve(); break;
+  case MENU_PROXIMITY_RATIONAL:
+    approximation_type = PROXIMITY_RATIONAL;
+    depth = 0;
     reconstructCurve(); break;
   case MENU_INC_DEPTH: depth++; reconstructCurve(); break;
   case MENU_DEC_DEPTH: if (depth) depth--; reconstructCurve(); break;
@@ -515,6 +558,8 @@ void keyboard(unsigned char key, int x, int y)
     case 'm' : executeCommand(MENU_PROXIMITY_MULTIPLICITY); break;
     case 'f' : executeCommand(MENU_PROXIMITY_FIT); break;
     case 'D' : executeCommand(MENU_PROXIMITY_DISPLACEMENT); break;
+    case 'l' : executeCommand(MENU_PROXIMITY_SLIDER); break;
+    case 'R' : executeCommand(MENU_PROXIMITY_RATIONAL); break;
     case '2' :
     case '+' : executeCommand(MENU_INC_DEPTH); break;
     case '1' :
@@ -622,6 +667,8 @@ int buildPopupMenu()
   glutAddMenuEntry("Proximity Bezier multiplicity\t(m)", MENU_PROXIMITY_MULTIPLICITY);
   glutAddMenuEntry("Proximity Bezier fit\t(f)", MENU_PROXIMITY_FIT);
   glutAddMenuEntry("Proximity w/displacement\t(D)", MENU_PROXIMITY_DISPLACEMENT);
+  glutAddMenuEntry("Proximity w/sliding clubs\t(l)", MENU_PROXIMITY_SLIDER);
+  glutAddMenuEntry("Proximity w/rational curve\t(R)", MENU_PROXIMITY_RATIONAL);
   glutAddSubMenu("Proximity options", prox_options);
   glutAddMenuEntry("----", -1);
   glutAddMenuEntry("Load clubs\t(L)", MENU_LOAD);

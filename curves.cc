@@ -8,6 +8,8 @@
 
 #include <Eigen/LU>
 
+#include "nelder-mead.hh"
+
 double BezierCurve::bernstein(size_t i, size_t n, double u)
 {
   DoubleVector tmp(n + 1, 0.0);
@@ -1059,6 +1061,7 @@ static bool insideHull(const PointVector &hull, const Point &p) {
 
 static Point displacementInCHull(const PointVector &hull, const Point &p, const Vector &d) {
   auto q = p + d;
+  return q; // comment to coerce the displacement curve to stay in the convex hull
   if (insideHull(hull, q))
     return q;
   size_t n = hull.size();
@@ -1131,6 +1134,57 @@ BSplineCurve BSplineCurve::proximityDisplacement(PointVector const &points, size
   std::cerr << "Longest segment: " << dmax * 100 / axis << '%' << std::endl;
 #endif
 
+  return bezierToBSpline(result);
+}
+
+BSplineCurve BSplineCurve::proximitySlider(PointVector const &points, size_t depth) {
+  BezierCurve result;
+  result.n = points.size() + depth - 1;
+  result.cp.resize(points.size() + depth);
+  result.cp.front() = points.front();
+  result.cp.back() = points.back();
+  PBezierCurve base(points, 0.0);
+
+  size_t n = points.size() + depth - 2;
+
+  auto slideClubs = [&](const DoubleVector &x) {
+    auto sorted = x;
+    std::sort(sorted.begin(), sorted.end());
+    for (size_t k = 1; k <= n; ++k)
+      result.cp[k] = base.evaluate(sorted[k-1]);
+  };
+
+  auto f = [&](const DoubleVector &x) {
+    slideClubs(x);
+    double err = 0;
+    for (size_t k = 1; k <= n; ++k) {
+      double u = (double)k / (n + 1);
+      err += (base.evaluate(u) - result.evaluate(u)).normSqr();
+    }
+    return err;
+  };
+
+  DoubleVector x;
+  for (size_t k = 1; k <= n; ++k)
+    x.push_back((double)k / (n + 1));
+
+  double step = 0.1 / (n + 1);
+  NelderMead::optimize(f, x, 100, 0.0, step);
+  slideClubs(x);
+
+  return bezierToBSpline(result);
+}
+
+BSplineCurve BSplineCurve::proximityRational(PointVector const &points, size_t depth) {
+  BezierCurve result;
+  result.n = points.size() - 1;
+  result.cp = points;
+  for (size_t i = 1; i < result.n; ++i) {
+    result.cp[i] *= depth + 1;
+    result.cp[i].z = depth + 1;
+  }
+  result.cp.front().z = 1;
+  result.cp.back().z = 1;
   return bezierToBSpline(result);
 }
 
