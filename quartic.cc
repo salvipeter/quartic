@@ -637,6 +637,13 @@ void mouseMotion(int x, int y)
 
 int buildPopupMenu()
 {
+  int prox_methods = glutCreateMenu(executeCommand);
+  glutAddMenuEntry("Proximity Bezier subdivision\t(b)", MENU_PROXIMITY);
+  glutAddMenuEntry("Proximity Bezier multiplicity\t(m)", MENU_PROXIMITY_MULTIPLICITY);
+  glutAddMenuEntry("Proximity Bezier fit\t(f)", MENU_PROXIMITY_FIT);
+  glutAddMenuEntry("Proximity w/displacement\t(D)", MENU_PROXIMITY_DISPLACEMENT);
+  glutAddMenuEntry("Proximity w/sliding clubs\t(l)", MENU_PROXIMITY_SLIDER);
+  glutAddMenuEntry("Proximity w/rational curve\t(R)", MENU_PROXIMITY_RATIONAL);
   int prox_options = glutCreateMenu(executeCommand);
   glutAddMenuEntry("Increase proximity\t(+/2)", MENU_INC_DEPTH);
   glutAddMenuEntry("Decrease proximity\t(-/1)", MENU_DEC_DEPTH);
@@ -663,12 +670,7 @@ int buildPopupMenu()
   glutAddMenuEntry("Interpolation: Sketches\t(s)", MENU_INTERPOLATE_SKETCHES);
   glutAddMenuEntry("Approximation\t(A)", MENU_APPROXIMATE);
   glutAddMenuEntry("----", -1);
-  glutAddMenuEntry("Proximity Bezier subdivision\t(b)", MENU_PROXIMITY);
-  glutAddMenuEntry("Proximity Bezier multiplicity\t(m)", MENU_PROXIMITY_MULTIPLICITY);
-  glutAddMenuEntry("Proximity Bezier fit\t(f)", MENU_PROXIMITY_FIT);
-  glutAddMenuEntry("Proximity w/displacement\t(D)", MENU_PROXIMITY_DISPLACEMENT);
-  glutAddMenuEntry("Proximity w/sliding clubs\t(l)", MENU_PROXIMITY_SLIDER);
-  glutAddMenuEntry("Proximity w/rational curve\t(R)", MENU_PROXIMITY_RATIONAL);
+  glutAddSubMenu("Proximity methods", prox_methods);
   glutAddSubMenu("Proximity options", prox_options);
   glutAddMenuEntry("----", -1);
   glutAddMenuEntry("Load clubs\t(L)", MENU_LOAD);
