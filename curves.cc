@@ -164,6 +164,35 @@ BezierCurve BezierCurve::elevate() const {
   return result;
 }
 
+// As described in
+//   T. Várady, P. Salvi, I. Kovács:
+//     Enhancement of a multi-sided Bézier surface representation
+//       CAGD 55 (2017)
+// and earlier in
+//   M. Eck:
+//     Degree reduction of Bézier curves
+//       CAGD 10 (1993)
+// and even eariler in
+//   A.R. Forrest:
+//     Interactive interpolation and approximation by Bézier polynomials
+//       The Computer Journal 15 (1972)
+BezierCurve BezierCurve::reduce() const {
+  BezierCurve result;
+  result.n = n - 1;
+  size_t m = result.n / 2;
+  result.cp.resize(n);
+  result.cp[0] = cp.front();
+  for (size_t j = 1; j <= m; ++j)
+    result.cp[j] = (cp[j] * n - result.cp[j-1] * j) / (n - j);
+  auto tmp = result.cp[m];
+  result.cp[n-1] = cp.back();
+  for (size_t j = n - 1; j >= n - m; --j)
+    result.cp[j-1] = (cp[j] * n - result.cp[j] * (n - j)) / j;
+  if (m == n - m - 1)           // two different middle control points
+    result.cp[m] = (result.cp[m] + tmp) / 2;
+  return result;
+}
+
 BezierCurve BezierCurve::interpolateUniform(const PointVector &points) {
   BezierCurve result;
   result.n = points.size() - 1;
@@ -1185,6 +1214,20 @@ BSplineCurve BSplineCurve::proximityRational(PointVector const &points, size_t d
   }
   result.cp.front().z = 1;
   result.cp.back().z = 1;
+  return bezierToBSpline(result);
+}
+
+BSplineCurve BSplineCurve::proximityReduced(PointVector const &points, size_t depth, double alpha) {
+  size_t const resolution = 100;
+  PBezierCurve base(points, std::max(0.0, std::min(1.0, 1.0 - alpha)));
+  BezierCurve result;
+  result.n = resolution;
+  for (size_t i = 0; i <= resolution; ++i) {
+    double u = (double)i / resolution;
+    result.cp.push_back(base.evaluate(u));
+  }
+  while (result.n > points.size() + depth)
+    result = result.reduce();
   return bezierToBSpline(result);
 }
 

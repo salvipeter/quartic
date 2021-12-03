@@ -32,6 +32,7 @@ struct BezierCurve : public Curve
   Point derivativesByControlPoints(double u, size_t d, VectorVector &der) const;
   bool hasInflections() const;
   BezierCurve elevate() const;
+  BezierCurve reduce() const;
   static BezierCurve interpolateUniform(const PointVector &points);
 };
 
@@ -78,6 +79,7 @@ struct BSplineCurve : public Curve
                                             size_t iterations);
   static BSplineCurve proximitySlider(PointVector const &points, size_t depth);
   static BSplineCurve proximityRational(PointVector const &points, size_t depth);
+  static BSplineCurve proximityReduced(PointVector const &points, size_t depth, double alpha);
 };
 
 struct PBezierCurve : public Curve

@@ -22,7 +22,7 @@ size_t degree = 3;
 enum ApproximationType {
   INTERP_PIEGL_SIMPLE, INTERP_PIEGL_PARABOLA, INTERP_SKETCHES, APPROXIMATE,
   PROXIMITY, PROXIMITY_MULTIPLICITY, PROXIMITY_FIT, PROXIMITY_DISPLACEMENT, PROXIMITY_SLIDER,
-  PROXIMITY_RATIONAL
+  PROXIMITY_RATIONAL, PROXIMITY_REDUCED
 } approximation_type = INTERP_SKETCHES;
 size_t const approximation_complexity = 5;
 bool show_curvature = false;
@@ -42,6 +42,7 @@ enum MenuCommand { MENU_RESET, MENU_DELETE_LAST, MENU_CUBIC, MENU_QUARTIC, MENU_
                    MENU_APPROXIMATE,
                    MENU_PROXIMITY, MENU_PROXIMITY_MULTIPLICITY, MENU_PROXIMITY_FIT,
                    MENU_PROXIMITY_DISPLACEMENT, MENU_PROXIMITY_SLIDER, MENU_PROXIMITY_RATIONAL,
+                   MENU_PROXIMITY_REDUCED,
                    MENU_INC_DEPTH, MENU_DEC_DEPTH,
                    MENU_INC_ALPHA, MENU_DEC_ALPHA, MENU_DEFAULT_ALPHA,
                    MENU_INC_ITERATION, MENU_DEC_ITERATION,
@@ -141,7 +142,8 @@ void drawCurve()
   }
 
   if (approximation_type == PROXIMITY_FIT ||
-      approximation_type == PROXIMITY_DISPLACEMENT) {
+      approximation_type == PROXIMITY_DISPLACEMENT ||
+      approximation_type == PROXIMITY_REDUCED) {
     std::unique_ptr<Curve> base;
     if (approximation_type == PROXIMITY_FIT)
       base = std::make_unique<BSplineCurve>(BSplineCurve::uniformCubic(points));
@@ -332,6 +334,19 @@ void drawInfo()
     s_param = "";
     s_interp = "Pro: rat";
     break;
+  case PROXIMITY_REDUCED:
+    {
+      std::ostringstream s;
+      s << "Deg: " << curve.n;
+      s_degree = s.str();
+    }
+    {
+      std::ostringstream s;
+      s << "Alp: " << alpha;
+      s_param = s.str();
+    }
+    s_interp = "Pro: red";
+    break;
   }
   glColor3d(0.0, 0.0, 0.0);
   glRasterPos2f(-0.98, 0.92);
@@ -435,6 +450,9 @@ void reconstructCurve()
   case PROXIMITY_RATIONAL:
     curve = BSplineCurve::proximityRational(points, depth);
     break;
+  case PROXIMITY_REDUCED:
+    curve = BSplineCurve::proximityReduced(points, depth, alpha);
+    break;
   }
 }
 
@@ -476,6 +494,10 @@ void executeCommand(int command)
   case MENU_PROXIMITY_RATIONAL:
     approximation_type = PROXIMITY_RATIONAL;
     depth = 0;
+    reconstructCurve(); break;
+  case MENU_PROXIMITY_REDUCED:
+    approximation_type = PROXIMITY_REDUCED;
+    depth = alpha = 0;
     reconstructCurve(); break;
   case MENU_INC_DEPTH: depth++; reconstructCurve(); break;
   case MENU_DEC_DEPTH: if (depth) depth--; reconstructCurve(); break;
@@ -560,6 +582,7 @@ void keyboard(unsigned char key, int x, int y)
     case 'D' : executeCommand(MENU_PROXIMITY_DISPLACEMENT); break;
     case 'l' : executeCommand(MENU_PROXIMITY_SLIDER); break;
     case 'R' : executeCommand(MENU_PROXIMITY_RATIONAL); break;
+    case 'u' : executeCommand(MENU_PROXIMITY_REDUCED); break;
     case '2' :
     case '+' : executeCommand(MENU_INC_DEPTH); break;
     case '1' :
@@ -644,6 +667,7 @@ int buildPopupMenu()
   glutAddMenuEntry("Proximity w/displacement\t(D)", MENU_PROXIMITY_DISPLACEMENT);
   glutAddMenuEntry("Proximity w/sliding clubs\t(l)", MENU_PROXIMITY_SLIDER);
   glutAddMenuEntry("Proximity w/rational curve\t(R)", MENU_PROXIMITY_RATIONAL);
+  glutAddMenuEntry("Proximity w/reduced curve\t(u)", MENU_PROXIMITY_REDUCED);
   int prox_options = glutCreateMenu(executeCommand);
   glutAddMenuEntry("Increase proximity\t(+/2)", MENU_INC_DEPTH);
   glutAddMenuEntry("Decrease proximity\t(-/1)", MENU_DEC_DEPTH);
