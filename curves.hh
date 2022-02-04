@@ -33,6 +33,7 @@ struct BezierCurve : public Curve
   bool hasInflections() const;
   BezierCurve elevate() const;
   BezierCurve reduce() const;
+  BezierCurve reduce(size_t target) const;
   static BezierCurve interpolateUniform(const PointVector &points);
 };
 

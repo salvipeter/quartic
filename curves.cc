@@ -10,6 +10,10 @@
 
 #include "nelder-mead.hh"
 
+extern "C" {
+#include "reduction.h"
+}
+
 double BezierCurve::bernstein(size_t i, size_t n, double u)
 {
   DoubleVector tmp(n + 1, 0.0);
@@ -190,6 +194,20 @@ BezierCurve BezierCurve::reduce() const {
     result.cp[j-1] = (cp[j] * n - result.cp[j] * (n - j)) / j;
   if (m == n - m - 1)           // two different middle control points
     result.cp[m] = (result.cp[m] + tmp) / 2;
+  return result;
+}
+
+BezierCurve BezierCurve::reduce(size_t target) const {
+  BezierCurve result;
+  result.n = target;
+  std::vector<double> Q((target + 1) * (n + 1));
+  reduction_matrix(n, target, 1, 1, &Q[0]);
+  for (size_t i = 0; i <= target; ++i) {
+    Point p;
+    for (size_t j = 0; j <= n; ++j)
+      p += cp[j] * Q[i * (n + 1) + j];
+    result.cp.push_back(p);
+  }
   return result;
 }
 
@@ -1226,8 +1244,9 @@ BSplineCurve BSplineCurve::proximityReduced(PointVector const &points, size_t de
     double u = (double)i / resolution;
     result.cp.push_back(base.evaluate(u));
   }
-  while (result.n > points.size() + depth)
-    result = result.reduce();
+  // while (result.n > points.size() + depth)
+  //   result = result.reduce();
+  result = result.reduce(points.size() + depth);
   return bezierToBSpline(result);
 }
 
