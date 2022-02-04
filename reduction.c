@@ -310,6 +310,7 @@ static mpq_t *computeQ2(int m, int n, int M, int N,
   mpq_t *tmp1 = multiply(m + 1, M + 1, M + 1, D1, L);
   mpq_t *tmp2 = multiply(m + 1, M + 1, N + 1, tmp1, I);
   clear((m + 1) * (M + 1), tmp1);
+  clear((M + 1) * (N + 1), I);
   mpq_t *tmp3 = multiply(m + 1, N + 1, N + 1, tmp2, E);
   clear((m + 1) * (N + 1), tmp2);
   mpq_t *tmp4 = multiply(m + 1, N + 1, N + 1, tmp3, D);
