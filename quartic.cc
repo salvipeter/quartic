@@ -9,8 +9,12 @@
 #include <string>
 #include <vector>
 
+#ifdef __APPLE__
+#include <GLUT/glut.h>
+#else
 #include <GL/glut.h>
 #include <GL/freeglut_ext.h>
+#endif
 
 #include "curves.hh"
 
@@ -26,6 +30,7 @@ enum ApproximationType {
 } approximation_type = INTERP_SKETCHES;
 size_t const approximation_complexity = 5;
 bool show_curvature = false;
+bool show_controls = true;
 bool centripetal_parameterization = false;
 int const resolution = 800;	// number of points in the curve
 int const width = 1000;
@@ -36,7 +41,7 @@ std::string message;
 
 // IDs for the menu elements / keyboard shortcuts
 enum MenuCommand { MENU_RESET, MENU_DELETE_LAST, MENU_CUBIC, MENU_QUARTIC, MENU_CURVATURE,
-                   MENU_INC_CURVATURE, MENU_DEC_CURVATURE,
+                   MENU_INC_CURVATURE, MENU_DEC_CURVATURE, MENU_CONTROL,
                    MENU_PARAM_ARC, MENU_PARAM_CENTRIPETAL,
                    MENU_INTERPOLATE_SIMPLE, MENU_INTERPOLATE_PARABOLA, MENU_INTERPOLATE_SKETCHES,
                    MENU_APPROXIMATE,
@@ -183,24 +188,26 @@ void drawCurve()
     glEnd();
   }
 
-  // control polygon
-  glLineWidth(2.0);
-  glColor3d(0.8, 0.5, 0.0);
-  glBegin(GL_LINE_STRIP);
-  for(PointVector::const_iterator i = curve.cp.begin(); i != curve.cp.end(); ++i)
-      if (i->z == 0)
-        glVertex3d(i->x, i->y, 0.0);
-      else
-        glVertex3d(i->x / i->z, i->y / i->z, 0.0);
-  glEnd();
+  if (show_controls) {
+      // control polygon
+      glLineWidth(2.0);
+      glColor3d(0.8, 0.5, 0.0);
+      glBegin(GL_LINE_STRIP);
+      for(PointVector::const_iterator i = curve.cp.begin(); i != curve.cp.end(); ++i)
+          if (i->z == 0)
+              glVertex3d(i->x, i->y, 0.0);
+          else
+              glVertex3d(i->x / i->z, i->y / i->z, 0.0);
+      glEnd();
 
-  // control point boxes
-  glColor3d(1.0, 0.0, 0.0);
-  glPointSize(10.0);
-  glBegin(GL_POINTS);
-  for(PointVector::const_iterator i = curve.cp.begin(); i != curve.cp.end(); ++i)
-    glVertex3d(i->x, i->y, i->z);
-  glEnd();
+      // control point boxes
+      glColor3d(1.0, 0.0, 0.0);
+      glPointSize(10.0);
+      glBegin(GL_POINTS);
+      for(PointVector::const_iterator i = curve.cp.begin(); i != curve.cp.end(); ++i)
+          glVertex3d(i->x, i->y, i->z);
+      glEnd();
+  }
 
   // the curve itself
   glLineWidth(3.0);
@@ -242,6 +249,16 @@ void drawCurve()
       }
   }
 }
+
+#ifdef __APPLE__
+// FreeGLUT extension
+void glutBitmapString(void *font, const unsigned char *s)
+{
+    size_t l = strlen(reinterpret_cast<const char *>(s));
+    for (size_t i = 0; i < l; i++)
+	glutBitmapCharacter(font, s[i]);
+}
+#endif
 
 void drawInfo()
 {
@@ -466,6 +483,7 @@ void executeCommand(int command)
   case MENU_CURVATURE: show_curvature = !show_curvature; break;
   case MENU_INC_CURVATURE: curvature_magnification *= 2; glutPostRedisplay(); break;
   case MENU_DEC_CURVATURE: curvature_magnification /= 2; glutPostRedisplay(); break;
+  case MENU_CONTROL: show_controls = !show_controls; break;
   case MENU_PARAM_ARC: centripetal_parameterization = false; reconstructCurve(); break;
   case MENU_PARAM_CENTRIPETAL: centripetal_parameterization = true; reconstructCurve(); break;
   case MENU_INTERPOLATE_SIMPLE: approximation_type = INTERP_PIEGL_SIMPLE; reconstructCurve(); break;
@@ -567,9 +585,10 @@ void keyboard(unsigned char key, int x, int y)
     case 'd' : executeCommand(MENU_DELETE_LAST); break;
     case '3' : executeCommand(MENU_CUBIC); break;
     case '4' : executeCommand(MENU_QUARTIC); break;
-    case 'C' : executeCommand(MENU_CURVATURE); break;
+    case 'k' : executeCommand(MENU_CURVATURE); break;
     case '*' : executeCommand(MENU_INC_CURVATURE); break;
     case '/' : executeCommand(MENU_DEC_CURVATURE); break;
+    case 'C' : executeCommand(MENU_CONTROL); break;
     case 'a' : executeCommand(MENU_PARAM_ARC); break;
     case 'c' : executeCommand(MENU_PARAM_CENTRIPETAL); break;
     case 'n' : executeCommand(MENU_INTERPOLATE_SIMPLE); break;
@@ -679,9 +698,10 @@ int buildPopupMenu()
   int menu = glutCreateMenu(executeCommand);
   glutAddMenuEntry("Reset\t(r)", MENU_RESET);
   glutAddMenuEntry("Delete last point\t(d)", MENU_DELETE_LAST);
-  glutAddMenuEntry("Toggle curvature\t(C)", MENU_CURVATURE);
+  glutAddMenuEntry("Toggle curvature\t(k)", MENU_CURVATURE);
   glutAddMenuEntry("Scale up curvature\t(*)", MENU_INC_CURVATURE);
   glutAddMenuEntry("Scale down curvature\t(/)", MENU_DEC_CURVATURE);
+  glutAddMenuEntry("Toggle control points\t(C)", MENU_CONTROL);
   glutAddMenuEntry("----", -1);
   glutAddMenuEntry("Use cubic curve\t(3)", MENU_CUBIC);
   glutAddMenuEntry("Use quartic curve\t(4)", MENU_QUARTIC);

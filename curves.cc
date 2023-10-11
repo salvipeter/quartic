@@ -474,7 +474,8 @@ BSplineCurve BSplineCurve::insertKnot(double u, size_t k, size_t s, size_t r) co
     result.cp[L] = tmp[0];
     result.cp[k+r-j-s] = tmp[p-j-s];
   }
-  std::copy_n(tmp.begin() + 1, p - s - 1 - r, result.cp.begin() + L + 1);
+  if (p > s + r + 1)
+    std::copy_n(tmp.begin() + 1, p - s - 1 - r, result.cp.begin() + L);
 
   return result;
 }
