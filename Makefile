@@ -1,10 +1,10 @@
 all: quartic
 
 CFLAGS=-g -Wall -std=c11 -pedantic
-CXXFLAGS=-g -Wall -std=c++17 -pedantic -I/usr/include/eigen3 -DDEBUG
+CXXFLAGS=-g -Wall -std=c++17 -pedantic -I/usr/include/eigen3 -DDEBUG -fsanitize=address
 
 quartic: quartic.o curves.o nelder-mead.o reduction.o
-	g++ -o $@ $^ -lGL -lGLU -lglut -lgmp
+	g++ -o $@ $^ -lasan -lGL -lGLU -lglut -lgmp
 
 curves.o: curves.cc curves.hh vector.hh
 

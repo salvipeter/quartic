@@ -20,7 +20,7 @@
 
 size_t degree = 3;
 enum ApproximationType {
-  INTERP_PIEGL_SIMPLE, INTERP_PIEGL_PARABOLA, INTERP_SKETCHES, APPROXIMATE,
+  INTERP_PIEGL_SIMPLE, INTERP_PIEGL_PARABOLA, INTERP_SKETCHES, INTERP_DOUBLED_KNOTS, APPROXIMATE,
   PROXIMITY, PROXIMITY_MULTIPLICITY, PROXIMITY_FIT, PROXIMITY_DISPLACEMENT, PROXIMITY_SLIDER,
   PROXIMITY_RATIONAL, PROXIMITY_REDUCED
 } approximation_type = INTERP_SKETCHES;
@@ -39,7 +39,7 @@ enum MenuCommand { MENU_RESET, MENU_DELETE_LAST, MENU_CUBIC, MENU_QUARTIC, MENU_
                    MENU_INC_CURVATURE, MENU_DEC_CURVATURE,
                    MENU_PARAM_ARC, MENU_PARAM_CENTRIPETAL,
                    MENU_INTERPOLATE_SIMPLE, MENU_INTERPOLATE_PARABOLA, MENU_INTERPOLATE_SKETCHES,
-                   MENU_APPROXIMATE,
+                   MENU_INTERPOLATE_DOUBLED_KNOTS, MENU_APPROXIMATE,
                    MENU_PROXIMITY, MENU_PROXIMITY_MULTIPLICITY, MENU_PROXIMITY_FIT,
                    MENU_PROXIMITY_DISPLACEMENT, MENU_PROXIMITY_SLIDER, MENU_PROXIMITY_RATIONAL,
                    MENU_PROXIMITY_REDUCED,
@@ -258,6 +258,9 @@ void drawInfo()
   case INTERP_PIEGL_SIMPLE: s_interp = "Int: nor"; break;
   case INTERP_PIEGL_PARABOLA: s_interp = "Int: par"; break;
   case INTERP_SKETCHES: s_interp = "Int: ske"; break;
+  case INTERP_DOUBLED_KNOTS:
+    s_degree = "Deg: 3"; s_param = "Par: arc"; s_interp = "Int: dbk";
+    break;
   case APPROXIMATE: s_interp = "Approx."; break;
   case PROXIMITY:
     {
@@ -427,6 +430,9 @@ void reconstructCurve()
   case INTERP_SKETCHES:
     curve = BSplineCurve::interpolateAsInSketches(points, degree, centripetal_parameterization);
     break;
+  case INTERP_DOUBLED_KNOTS:
+    curve = BSplineCurve::interpolateDoubledKnots(points);
+    break;
   case APPROXIMATE:
     curve = BSplineCurve::approximate(points, std::min(degree, points.size() - 1),
                                       std::min(approximation_complexity, points.size() - 1),
@@ -472,6 +478,7 @@ void executeCommand(int command)
   case MENU_INTERPOLATE_PARABOLA:
     approximation_type = INTERP_PIEGL_PARABOLA; reconstructCurve(); break;
   case MENU_INTERPOLATE_SKETCHES: approximation_type = INTERP_SKETCHES; reconstructCurve(); break;
+  case MENU_INTERPOLATE_DOUBLED_KNOTS: approximation_type = INTERP_DOUBLED_KNOTS; reconstructCurve(); break;
   case MENU_APPROXIMATE: approximation_type = APPROXIMATE; reconstructCurve(); break;
   case MENU_PROXIMITY: approximation_type = PROXIMITY; depth = alpha = 0; reconstructCurve(); break;
   case MENU_PROXIMITY_MULTIPLICITY: approximation_type = PROXIMITY_MULTIPLICITY;
@@ -575,6 +582,7 @@ void keyboard(unsigned char key, int x, int y)
     case 'n' : executeCommand(MENU_INTERPOLATE_SIMPLE); break;
     case 'p' : executeCommand(MENU_INTERPOLATE_PARABOLA); break;
     case 's' : executeCommand(MENU_INTERPOLATE_SKETCHES); break;
+    case 'k' : executeCommand(MENU_INTERPOLATE_DOUBLED_KNOTS); break;
     case 'A' : executeCommand(MENU_APPROXIMATE); break;
     case 'b' : executeCommand(MENU_PROXIMITY); break;
     case 'm' : executeCommand(MENU_PROXIMITY_MULTIPLICITY); break;
@@ -692,6 +700,7 @@ int buildPopupMenu()
   glutAddMenuEntry("Interpolation: Piegl/normal\t(n)", MENU_INTERPOLATE_SIMPLE);
   glutAddMenuEntry("Interpolation: Piegl/parabola\t(p)", MENU_INTERPOLATE_PARABOLA);
   glutAddMenuEntry("Interpolation: Sketches\t(s)", MENU_INTERPOLATE_SKETCHES);
+  glutAddMenuEntry("Interpolation: Doubled knots\t(k)", MENU_INTERPOLATE_DOUBLED_KNOTS);
   glutAddMenuEntry("Approximation\t(A)", MENU_APPROXIMATE);
   glutAddMenuEntry("----", -1);
   glutAddSubMenu("Proximity methods", prox_methods);

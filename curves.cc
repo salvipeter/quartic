@@ -807,6 +807,117 @@ BSplineCurve BSplineCurve::interpolateAsInSketches(PointVector const &points, si
   return result;
 }
 
+BSplineCurve BSplineCurve::interpolateDoubledKnots(PointVector const &Q)
+{
+  // Q. Ni, Ch. Xie:
+  // The stretch energy minimizing B-spline interpolation curves and its applications.
+  //   (submitted to MDPI Mathematics)
+  size_t const n = Q.size() - 1;
+  BSplineCurve result;
+  result.p = 3;
+  auto &knots = result.knots;
+  auto &cp = result.cp;
+
+  DoubleVector t;
+  t.push_back(0);
+  for (size_t k = 1; k <= n; ++k)
+    t.push_back(t.back() + (Q[k] - Q[k-1]).norm());
+  for (size_t k = 1; k < n; ++k)
+    t[k] /= t.back();
+  t[n] = 1;
+
+  knots.resize(2*n+6);
+  for (size_t i = 0; i <= 3; ++i)
+    knots[i] = 0;
+  for (size_t i = 1; i < n; ++i)
+    knots[(i+1)*2] = knots[(i+1)*2+1] = t[i];
+  for (size_t i = 0; i <= 3; ++i)
+    knots.rbegin()[i] = 1;
+
+  Eigen::MatrixXd B0 = Eigen::MatrixXd::Zero(2 * n + 2, n + 1);
+  B0(1,0) = 1;
+  for (size_t i = 1; i < n; ++i) {
+    double l = (t[i] - t[i-1]) / (t[i+1] - t[i-1]);
+    B0(2*i,i) = -l / (1 - l);
+    B0(2*i+1,i) = 1;
+  }
+  B0(2*n,n) = 1;
+
+  Eigen::MatrixXd B1 = Eigen::MatrixXd::Zero(2 * n + 2, n + 1);
+  B1(0,0) = 1;
+  for (size_t i = 1; i < n; ++i) {
+    double l = (t[i] - t[i-1]) / (t[i+1] - t[i-1]);
+    B1(2*i,i) = 1 / (1 - l);
+  }
+  B1(2*n+1,n) = 1;
+
+  Eigen::MatrixXd B2 = Eigen::MatrixXd::Zero(2 * n + 1, 2 * n + 2);
+  for (size_t i = 0; i < 2 * n + 1; ++i) {
+    B2(i,i) = -1;
+    B2(i,i+1) = 1;
+  }
+
+  Eigen::MatrixXd W = Eigen::MatrixXd::Zero(2 * n + 1, 2 * n + 1);
+  for (size_t i = 0; i < 2 * n + 1; ++i)
+    W(i,i) = 3 / (knots[i+4] - knots[i+1]);
+
+  Eigen::MatrixXd A = Eigen::MatrixXd::Zero(2 * n + 1, 2 * n + 1);
+  // Note that the paper uses 1-based indexing here
+  for (size_t k = 0; k < 2 * n + 1; ++k) {
+    auto tk = t[k/2];
+    auto tkm = k >= 2 ? t[k/2-1] : 0;
+    auto tkp = k <= 2 * (n - 1) ? t[k/2+1] : 1;
+    for (size_t l = 0; l < 2 * n + 1; ++l)
+      if (k % 2 == 0) {
+        if (l == k - 2)
+          A(k,l) = (tk - tkm) / 30;
+        else if (l == k - 1)
+          A(k,l) = (tk - tkm) / 10;
+        else if (l == k)
+          A(k,l) = (tkp - tkm) / 5;
+        else if (l == k + 1)
+          A(k,l) = (tkp - tk) / 10;
+        else if (l == k + 2)
+          A(k,l) = (tkp - tk) / 30;
+      } else {
+        if (l == k - 1)
+          A(k,l) = (tkp - tk) / 10;
+        else if (l == k)
+          A(k,l) = (tkp - tk) / 7.5;
+        else if (l == k + 1)
+          A(k,l) = (tkp - tk) / 10;
+      }
+  }
+
+  Eigen::MatrixXd M = Eigen::MatrixXd::Zero(2 * n + 1, n + 1);
+  M(0,0) = 1;
+  M(1,0) = -1;
+  for (size_t i = 1; i < n; ++i) {
+    double l = (t[i] - t[i-1]) / (t[i+1] - t[i-1]);
+    M(2*i-1,i) = -l / (1 - l);
+    M(2*i,i) = 1 / (1 - l);
+    M(2*i+1,i) = -1;
+  }
+  M(2*n-1,n) = 1;
+  M(2*n,n) = -1;
+
+  Eigen::MatrixXd Q1(n + 1, 2);
+  for (size_t i = 0; i <= n; ++i) {
+    Q1(i, 0) = Q[i].x;
+    Q1(i, 1) = Q[i].y;
+  }
+
+  auto H = M.transpose() * W.transpose() * A * W * B2;
+  Eigen::MatrixXd odd = (H * B0).fullPivLu().solve(-H * B1 * Q1);
+  Eigen::MatrixXd x = B0 * odd + B1 * Q1;
+
+  for (size_t i = 0; i < 2 * n + 2; ++i)
+    cp.push_back(Point(x(i, 0), x(i, 1), 0));
+
+  result.n = cp.size() - 1;
+  return result;
+}
+
 // Simple version - no constraints, weights or derivatives as input.
 // Approximates `points' with a B-spline of degree `p' with `n'+1 control points.
 // This is essentially the same algorithm as `interpolate', just the knotvector generation differs.

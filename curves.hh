@@ -70,6 +70,7 @@ struct BSplineCurve : public Curve
                                                   bool centripetal);
   static BSplineCurve interpolateAsInSketches(PointVector const &points, size_t degree,
                                               bool centripetal);
+  static BSplineCurve interpolateDoubledKnots(PointVector const &points);
   static BSplineCurve approximate(PointVector const &points, size_t degree, size_t n,
                                   bool centripetal);
   static BSplineCurve uniformCubic(const PointVector &points);
